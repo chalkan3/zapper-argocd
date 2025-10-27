@@ -1,0 +1,11 @@
+# Pulumi Application Order
+# This file documents the expected order of Application deployment
+# Files are applied in alphabetical order due to numeric prefixes
+
+01-clickhouse-operator.yaml
+02-cloudnative-pg-operator.yaml
+03-peerdb-dependencies.yaml
+04-peerdb.yaml
+05-hpa.yaml
+06-monitoring.yaml
+07-peerdb-setup.yaml

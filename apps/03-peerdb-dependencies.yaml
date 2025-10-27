@@ -2,6 +2,8 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: peerdb-postgresql
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"  # Deploy dependencies
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
@@ -84,6 +86,8 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: peerdb-temporal
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"  # Deploy dependencies
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io

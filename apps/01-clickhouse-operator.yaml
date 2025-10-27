@@ -1,33 +1,30 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: cloudnative-pg-operator
+  name: clickhouse-operator
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"  # Deploy operators first
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
 
   source:
-    repoURL: https://cloudnative-pg.github.io/charts
-    targetRevision: 0.21.6
-    chart: cloudnative-pg
+    repoURL: https://docs.altinity.com/clickhouse-operator/
+    targetRevision: 0.23.6
+    chart: altinity-clickhouse-operator
     helm:
-      releaseName: cnpg-operator
+      releaseName: clickhouse-operator
       values: |
-        crds:
-          create: true
-        resources:
-          requests:
-            memory: 128Mi
-            cpu: 100m
-          limits:
-            memory: 256Mi
-            cpu: 200m
+        operator:
+          image:
+            repository: altinity/clickhouse-operator
+            tag: 0.23.6
 
   destination:
     server: https://kubernetes.default.svc
-    namespace: cloudnative-pg
+    namespace: clickhouse
 
   syncPolicy:
     automated:
@@ -47,8 +44,10 @@ spec:
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: postgres-cluster
+  name: clickhouse-cluster
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"  # Deploy clusters after operators
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
@@ -59,11 +58,11 @@ spec:
     targetRevision: HEAD
     path: helm-values
     directory:
-      include: postgres-cluster.yaml
+      include: clickhouse-cluster.yaml
 
   destination:
     server: https://kubernetes.default.svc
-    namespace: cloudnative-pg
+    namespace: clickhouse
 
   syncPolicy:
     automated:
@@ -80,8 +79,7 @@ spec:
 
   # Depende do operator estar instalado
   ignoreDifferences:
-    - group: postgresql.cnpg.io
-      kind: Cluster
+    - group: clickhouse.altinity.com
+      kind: ClickHouseInstallation
       jsonPointers:
         - /status
-        - /spec/instances

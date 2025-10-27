@@ -1,10 +1,13 @@
-# ArgoCD Application for PeerDB Setup Job
-# This job automatically configures CDC mirror after PeerDB is deployed
+# ArgoCD Root Application (App of Apps Pattern)
+# This single Application manages all other Applications
+# Deploy order is controlled by:
+#   1. Numeric prefixes in filenames (01-, 02-, 03-, etc.)
+#   2. Sync waves within each Application
 
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: peerdb-setup
+  name: zapper-root
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
@@ -14,20 +17,22 @@ spec:
   source:
     repoURL: https://github.com/chalkan3/zapper-argocd.git
     targetRevision: main
-    path: manifests/peerdb
+    path: apps
 
   destination:
     server: https://kubernetes.default.svc
-    namespace: peerdb
+    namespace: argocd
 
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
+      allowEmpty: false
     syncOptions:
       - CreateNamespace=true
-
-  # Sync wave: deploy after PeerDB is ready
-  syncPolicy:
-    syncOptions:
-      - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
