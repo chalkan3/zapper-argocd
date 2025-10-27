@@ -1,0 +1,16 @@
+# ServiceMonitor para ClickHouse
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: clickhouse-cluster
+  namespace: clickhouse
+  labels:
+    app: clickhouse
+spec:
+  selector:
+    matchLabels:
+      clickhouse.altinity.com/Service: cluster
+  endpoints:
+    - port: http
+      interval: 30s
+      path: /metrics

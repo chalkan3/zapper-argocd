@@ -1,0 +1,16 @@
+# ServiceMonitor para PeerDB
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: peerdb
+  namespace: peerdb
+  labels:
+    app: peerdb
+spec:
+  selector:
+    matchLabels:
+      app: peerdb
+  endpoints:
+    - port: http
+      interval: 30s
+      path: /metrics

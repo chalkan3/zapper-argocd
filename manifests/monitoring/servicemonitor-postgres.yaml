@@ -1,0 +1,16 @@
+# ServiceMonitor para CloudNativePG (PostgreSQL)
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: postgres-cluster
+  namespace: cloudnative-pg
+  labels:
+    app: postgres-cluster
+spec:
+  selector:
+    matchLabels:
+      cnpg.io/cluster: postgres-cluster
+  endpoints:
+    - port: metrics
+      interval: 30s
+      path: /metrics

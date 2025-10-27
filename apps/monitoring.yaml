@@ -1,0 +1,295 @@
+# ArgoCD Applications para Stack de Monitoring (Prometheus + Grafana)
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kube-prometheus-stack
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://prometheus-community.github.io/helm-charts
+    targetRevision: 57.2.0
+    chart: kube-prometheus-stack
+    helm:
+      values: |
+        # Prometheus Operator
+        prometheusOperator:
+          enabled: true
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+
+        # Prometheus
+        prometheus:
+          enabled: true
+
+          prometheusSpec:
+            # Retenção de dados
+            retention: 30d
+            retentionSize: "50GB"
+
+            # Storage
+            storageSpec:
+              volumeClaimTemplate:
+                spec:
+                  accessModes: ["ReadWriteOnce"]
+                  resources:
+                    requests:
+                      storage: 50Gi
+
+            # Resources
+            resources:
+              requests:
+                cpu: 500m
+                memory: 2Gi
+              limits:
+                cpu: 2000m
+                memory: 8Gi
+
+            # Service monitors automáticos
+            serviceMonitorSelectorNilUsesHelmValues: false
+            podMonitorSelectorNilUsesHelmValues: false
+
+            # Habilitar monitoring de todos os namespaces
+            serviceMonitorNamespaceSelector: {}
+            serviceMonitorSelector: {}
+            podMonitorNamespaceSelector: {}
+            podMonitorSelector: {}
+
+          # Service
+          service:
+            type: ClusterIP
+            port: 9090
+
+        # Grafana
+        grafana:
+          enabled: true
+
+          adminPassword: admin123
+
+          # Persistence
+          persistence:
+            enabled: true
+            size: 10Gi
+
+          # Resources
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+
+          # Service
+          service:
+            type: ClusterIP
+            port: 80
+
+          # Datasources
+          datasources:
+            datasources.yaml:
+              apiVersion: 1
+              datasources:
+                - name: Prometheus
+                  type: prometheus
+                  url: http://kube-prometheus-stack-prometheus:9090
+                  isDefault: true
+                  access: proxy
+
+          # Dashboards default
+          defaultDashboardsEnabled: true
+          defaultDashboardsTimezone: America/Sao_Paulo
+
+          # Dashboard providers
+          dashboardProviders:
+            dashboardproviders.yaml:
+              apiVersion: 1
+              providers:
+                - name: 'default'
+                  orgId: 1
+                  folder: ''
+                  type: file
+                  disableDeletion: false
+                  editable: true
+                  options:
+                    path: /var/lib/grafana/dashboards/default
+
+                - name: 'clickhouse'
+                  orgId: 1
+                  folder: 'ClickHouse'
+                  type: file
+                  disableDeletion: false
+                  editable: true
+                  options:
+                    path: /var/lib/grafana/dashboards/clickhouse
+
+                - name: 'postgresql'
+                  orgId: 1
+                  folder: 'PostgreSQL'
+                  type: file
+                  disableDeletion: false
+                  editable: true
+                  options:
+                    path: /var/lib/grafana/dashboards/postgresql
+
+                - name: 'peerdb'
+                  orgId: 1
+                  folder: 'PeerDB'
+                  type: file
+                  disableDeletion: false
+                  editable: true
+                  options:
+                    path: /var/lib/grafana/dashboards/peerdb
+
+                - name: 'temporal'
+                  orgId: 1
+                  folder: 'Temporal'
+                  type: file
+                  disableDeletion: false
+                  editable: true
+                  options:
+                    path: /var/lib/grafana/dashboards/temporal
+
+          # Dashboards (do Grafana.com)
+          dashboards:
+            default:
+              # Kubernetes Cluster
+              kubernetes-cluster:
+                gnetId: 7249
+                revision: 1
+                datasource: Prometheus
+
+              # Node Exporter
+              node-exporter:
+                gnetId: 1860
+                revision: 31
+                datasource: Prometheus
+
+              # Kubernetes Pods
+              kubernetes-pods:
+                gnetId: 6417
+                revision: 1
+                datasource: Prometheus
+
+              # Kubernetes Deployments
+              kubernetes-deployments:
+                gnetId: 8588
+                revision: 1
+                datasource: Prometheus
+
+              # ArgoCD
+              argocd:
+                gnetId: 14584
+                revision: 1
+                datasource: Prometheus
+
+            clickhouse:
+              # ClickHouse Overview
+              clickhouse-overview:
+                gnetId: 882
+                revision: 3
+                datasource: Prometheus
+
+            postgresql:
+              # PostgreSQL Database
+              postgresql-database:
+                gnetId: 9628
+                revision: 7
+                datasource: Prometheus
+
+          # Grafana sidecar (para auto-carregar dashboards)
+          sidecar:
+            dashboards:
+              enabled: true
+              searchNamespace: ALL
+              label: grafana_dashboard
+              labelValue: "1"
+
+            datasources:
+              enabled: true
+              searchNamespace: ALL
+              label: grafana_datasource
+              labelValue: "1"
+
+        # Alertmanager
+        alertmanager:
+          enabled: true
+
+          alertmanagerSpec:
+            storage:
+              volumeClaimTemplate:
+                spec:
+                  accessModes: ["ReadWriteOnce"]
+                  resources:
+                    requests:
+                      storage: 10Gi
+
+            resources:
+              requests:
+                cpu: 50m
+                memory: 128Mi
+              limits:
+                cpu: 200m
+                memory: 256Mi
+
+        # Node Exporter (métricas dos nodes)
+        nodeExporter:
+          enabled: true
+
+        # Kube State Metrics
+        kubeStateMetrics:
+          enabled: true
+
+        # Prometheus Node Exporter
+        prometheus-node-exporter:
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+
+---
+# ServiceMonitors Application
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: monitoring-servicemonitors
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/chalkan3/zapper-argocd.git
+    targetRevision: main
+    path: manifests/monitoring
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

@@ -1,0 +1,201 @@
+# ConfigMap com dashboards adicionais para Grafana
+# Estes dashboards serão automaticamente carregados pelo sidecar do Grafana
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-peerdb
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  peerdb-overview.json: |
+    {
+      "dashboard": {
+        "title": "PeerDB Overview",
+        "tags": ["peerdb", "cdc"],
+        "timezone": "America/Sao_Paulo",
+        "panels": [
+          {
+            "id": 1,
+            "title": "PeerDB Pods",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "count(kube_pod_info{namespace=\"peerdb\", pod=~\"peerdb-.*\"})"
+              }
+            ]
+          },
+          {
+            "id": 2,
+            "title": "Flow Workers CPU Usage",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(container_cpu_usage_seconds_total{namespace=\"peerdb\", pod=~\"peerdb-flow-worker-.*\"}[5m])"
+              }
+            ]
+          },
+          {
+            "id": 3,
+            "title": "Flow Workers Memory Usage",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "container_memory_usage_bytes{namespace=\"peerdb\", pod=~\"peerdb-flow-worker-.*\"}"
+              }
+            ]
+          },
+          {
+            "id": 4,
+            "title": "PeerDB Server Requests",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(http_requests_total{job=\"peerdb\"}[5m])"
+              }
+            ]
+          }
+        ]
+      }
+    }
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-cdc-metrics
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  cdc-metrics.json: |
+    {
+      "dashboard": {
+        "title": "CDC Replication Metrics",
+        "tags": ["cdc", "replication", "peerdb"],
+        "timezone": "America/Sao_Paulo",
+        "panels": [
+          {
+            "id": 1,
+            "title": "PostgreSQL Replication Lag",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "pg_replication_lag_seconds{namespace=\"cloudnative-pg\"}"
+              }
+            ]
+          },
+          {
+            "id": 2,
+            "title": "PostgreSQL Replication Slots",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "pg_replication_slots_active{namespace=\"cloudnative-pg\"}"
+              }
+            ]
+          },
+          {
+            "id": 3,
+            "title": "WAL Segments",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "pg_wal_files{namespace=\"cloudnative-pg\"}"
+              }
+            ]
+          },
+          {
+            "id": 4,
+            "title": "Mirror Throughput (Rows/sec)",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(peerdb_mirror_rows_total[5m])"
+              }
+            ]
+          },
+          {
+            "id": 5,
+            "title": "Mirror Lag (seconds)",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "peerdb_mirror_lag_seconds"
+              }
+            ]
+          }
+        ]
+      }
+    }
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-temporal-workflows
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  temporal-workflows.json: |
+    {
+      "dashboard": {
+        "title": "Temporal Workflows",
+        "tags": ["temporal", "workflows"],
+        "timezone": "America/Sao_Paulo",
+        "panels": [
+          {
+            "id": 1,
+            "title": "Active Workflows",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "temporal_workflow_running_total"
+              }
+            ]
+          },
+          {
+            "id": 2,
+            "title": "Workflow Execution Rate",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(temporal_workflow_completed_total[5m])"
+              }
+            ]
+          },
+          {
+            "id": 3,
+            "title": "Workflow Failures",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(temporal_workflow_failed_total[5m])"
+              }
+            ]
+          },
+          {
+            "id": 4,
+            "title": "Task Queue Latency",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "temporal_task_queue_latency_seconds"
+              }
+            ]
+          },
+          {
+            "id": 5,
+            "title": "Frontend Service Requests",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(temporal_frontend_requests_total[5m])"
+              }
+            ]
+          }
+        ]
+      }
+    }

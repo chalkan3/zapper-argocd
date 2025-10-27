@@ -1,0 +1,303 @@
+# kube-prometheus-stack values
+# Inclui: Prometheus, Grafana, Alertmanager, Node Exporter, Kube State Metrics
+
+# Prometheus Operator
+prometheusOperator:
+  enabled: true
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# Prometheus
+prometheus:
+  enabled: true
+
+  prometheusSpec:
+    # Retenção de dados
+    retention: 30d
+    retentionSize: "50GB"
+
+    # Storage
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 50Gi
+
+    # Resources
+    resources:
+      requests:
+        cpu: 500m
+        memory: 2Gi
+      limits:
+        cpu: 2000m
+        memory: 8Gi
+
+    # Scrape configs adicionais
+    additionalScrapeConfigs:
+      # PostgreSQL CloudNativePG
+      - job_name: 'cloudnative-pg'
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names:
+                - cloudnative-pg
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_cnpg_io_cluster]
+            action: keep
+            regex: postgres-cluster
+          - source_labels: [__meta_kubernetes_pod_container_port_name]
+            action: keep
+            regex: metrics
+
+      # ClickHouse
+      - job_name: 'clickhouse'
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names:
+                - clickhouse
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            action: keep
+            regex: clickhouse
+          - source_labels: [__address__]
+            target_label: __address__
+            regex: (.+):.*
+            replacement: $1:9363
+
+      # PeerDB
+      - job_name: 'peerdb'
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names:
+                - peerdb
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            action: keep
+            regex: peerdb
+
+      # Temporal
+      - job_name: 'temporal'
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names:
+                - peerdb
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_name]
+            action: keep
+            regex: temporal
+
+    # Service monitors automáticos
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+
+    # Habilitar monitoring de todos os namespaces
+    serviceMonitorNamespaceSelector: {}
+    serviceMonitorSelector: {}
+    podMonitorNamespaceSelector: {}
+    podMonitorSelector: {}
+
+  # Service
+  service:
+    type: ClusterIP
+    port: 9090
+
+# Grafana
+grafana:
+  enabled: true
+
+  adminPassword: admin123
+
+  # Persistence
+  persistence:
+    enabled: true
+    size: 10Gi
+
+  # Resources
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+
+  # Service
+  service:
+    type: ClusterIP
+    port: 80
+
+  # Datasources
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        - name: Prometheus
+          type: prometheus
+          url: http://kube-prometheus-stack-prometheus:9090
+          isDefault: true
+          access: proxy
+
+  # Dashboards default
+  defaultDashboardsEnabled: true
+  defaultDashboardsTimezone: America/Sao_Paulo
+
+  # Dashboard providers
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: 'default'
+          orgId: 1
+          folder: ''
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/default
+
+        - name: 'clickhouse'
+          orgId: 1
+          folder: 'ClickHouse'
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/clickhouse
+
+        - name: 'postgresql'
+          orgId: 1
+          folder: 'PostgreSQL'
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/postgresql
+
+        - name: 'peerdb'
+          orgId: 1
+          folder: 'PeerDB'
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/peerdb
+
+        - name: 'temporal'
+          orgId: 1
+          folder: 'Temporal'
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/temporal
+
+  # Dashboards (serão criados via ConfigMaps)
+  dashboards:
+    default:
+      # Kubernetes Cluster
+      kubernetes-cluster:
+        gnetId: 7249
+        revision: 1
+        datasource: Prometheus
+
+      # Node Exporter
+      node-exporter:
+        gnetId: 1860
+        revision: 31
+        datasource: Prometheus
+
+      # Kubernetes Pods
+      kubernetes-pods:
+        gnetId: 6417
+        revision: 1
+        datasource: Prometheus
+
+      # Kubernetes Deployments
+      kubernetes-deployments:
+        gnetId: 8588
+        revision: 1
+        datasource: Prometheus
+
+      # ArgoCD
+      argocd:
+        gnetId: 14584
+        revision: 1
+        datasource: Prometheus
+
+    clickhouse:
+      # ClickHouse Overview
+      clickhouse-overview:
+        gnetId: 882
+        revision: 3
+        datasource: Prometheus
+
+    postgresql:
+      # PostgreSQL Database
+      postgresql-database:
+        gnetId: 9628
+        revision: 7
+        datasource: Prometheus
+
+# Alertmanager
+alertmanager:
+  enabled: true
+
+  alertmanagerSpec:
+    storage:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 10Gi
+
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+
+# Node Exporter (métricas dos nodes)
+nodeExporter:
+  enabled: true
+
+# Kube State Metrics
+kubeStateMetrics:
+  enabled: true
+
+# Prometheus Node Exporter
+prometheus-node-exporter:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+# Grafana sidecar (para auto-carregar dashboards)
+grafana:
+  sidecar:
+    dashboards:
+      enabled: true
+      searchNamespace: ALL
+      label: grafana_dashboard
+      labelValue: "1"
+
+    datasources:
+      enabled: true
+      searchNamespace: ALL
+      label: grafana_datasource
+      labelValue: "1"

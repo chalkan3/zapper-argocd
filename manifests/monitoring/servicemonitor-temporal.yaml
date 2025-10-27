@@ -1,0 +1,76 @@
+# ServiceMonitors para Temporal
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: temporal-frontend
+  namespace: peerdb
+  labels:
+    app.kubernetes.io/name: temporal
+    app.kubernetes.io/component: frontend
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: temporal
+      app.kubernetes.io/component: frontend
+  endpoints:
+    - port: metrics
+      interval: 30s
+      path: /metrics
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: temporal-history
+  namespace: peerdb
+  labels:
+    app.kubernetes.io/name: temporal
+    app.kubernetes.io/component: history
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: temporal
+      app.kubernetes.io/component: history
+  endpoints:
+    - port: metrics
+      interval: 30s
+      path: /metrics
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: temporal-matching
+  namespace: peerdb
+  labels:
+    app.kubernetes.io/name: temporal
+    app.kubernetes.io/component: matching
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: temporal
+      app.kubernetes.io/component: matching
+  endpoints:
+    - port: metrics
+      interval: 30s
+      path: /metrics
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: temporal-worker
+  namespace: peerdb
+  labels:
+    app.kubernetes.io/name: temporal
+    app.kubernetes.io/component: worker
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: temporal
+      app.kubernetes.io/component: worker
+  endpoints:
+    - port: metrics
+      interval: 30s
+      path: /metrics
