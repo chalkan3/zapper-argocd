@@ -510,23 +510,42 @@ Na UI do PeerDB:
 
 ### ✅ Verificar Replicação
 
-#### 1. Verificar Dummy Data
+#### 1. Verificar Dados de Teste
+
+Os dados de teste são inseridos **automaticamente** pelo Job `postgres-seed-data`:
 
 ```bash
+# Verificar status do Job
+kubectl get job -n cloudnative-pg postgres-seed-data
+kubectl logs -n cloudnative-pg job/postgres-seed-data
+
 # PostgreSQL
 kubectl port-forward -n cloudnative-pg svc/postgres-cluster-rw 5432:5432 &
 
-PGPASSWORD=$(kubectl get secret -n cloudnative-pg postgres-cluster-app -o jsonpath='{.data.password}' | base64 -d) \
+export PGPASSWORD=$(kubectl get secret -n cloudnative-pg postgres-cluster-app -o jsonpath='{.data.password}' | base64 -d)
+
+# Verificar dados inseridos
 psql -h localhost -U app_user -d app_db -c "SELECT COUNT(*) FROM users;"
-# Esperado: 4
+# Esperado: 10 usuários
 
-PGPASSWORD=$(kubectl get secret -n cloudnative-pg postgres-cluster-app -o jsonpath='{.data.password}' | base64 -d) \
 psql -h localhost -U app_user -d app_db -c "SELECT COUNT(*) FROM orders;"
-# Esperado: 5
+# Esperado: 26 pedidos
 
-PGPASSWORD=$(kubectl get secret -n cloudnative-pg postgres-cluster-app -o jsonpath='{.data.password}' | base64 -d) \
 psql -h localhost -U app_user -d app_db -c "SELECT COUNT(*) FROM events;"
-# Esperado: 4
+# Esperado: 30 eventos
+
+# Ver exemplos de dados
+psql -h localhost -U app_user -d app_db -c "SELECT * FROM users LIMIT 5;"
+psql -h localhost -U app_user -d app_db -c "SELECT * FROM orders WHERE status='completed' LIMIT 5;"
+psql -h localhost -U app_user -d app_db -c "SELECT * FROM events WHERE event_type='user_login' LIMIT 5;"
+```
+
+**Dados inclusos:**
+- **10 usuários** (alice_johnson, bob_smith, charlie_brown, etc.)
+- **26 pedidos** com produtos realistas (Laptop, iPhone, Gaming PC, etc.)
+- **30 eventos** (user_login, order_placed, product_view, payment_completed, etc.)
+- Status de pedidos: completed, shipped, processing, cancelled
+- Timestamps realistas para análise temporal
 ```
 
 #### 2. Verificar Replicação no ClickHouse
@@ -539,15 +558,22 @@ kubectl port-forward -n clickhouse svc/chi-clickhouse-cluster-clickhouse-0-0 900
 
 clickhouse-client --host localhost --port 9000 --user admin --password admin123 \
   --query "SELECT COUNT(*) FROM users;"
-# Esperado: 4
+# Esperado: 10
 
 clickhouse-client --host localhost --port 9000 --user admin --password admin123 \
   --query "SELECT COUNT(*) FROM orders;"
-# Esperado: 5
+# Esperado: 26
 
 clickhouse-client --host localhost --port 9000 --user admin --password admin123 \
   --query "SELECT COUNT(*) FROM events;"
-# Esperado: 4
+# Esperado: 30
+
+# Queries analíticas de exemplo
+clickhouse-client --host localhost --port 9000 --user admin --password admin123 \
+  --query "SELECT status, COUNT(*) as count FROM orders GROUP BY status ORDER BY count DESC;"
+
+clickhouse-client --host localhost --port 9000 --user admin --password admin123 \
+  --query "SELECT event_type, COUNT(*) as count FROM events GROUP BY event_type ORDER BY count DESC;"
 ```
 
 #### 3. Testar CDC em Tempo Real

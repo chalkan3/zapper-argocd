@@ -51,6 +51,20 @@ test_component "PostgreSQL Operator" \
   "Operator deployed"
 
 echo ""
+echo -e "${YELLOW}2.1️⃣  Verificando Seed Data Job...${NC}"
+SEED_JOB=$(kubectl get job -n cloudnative-pg postgres-seed-data --no-headers 2>/dev/null | wc -l)
+if [ "$SEED_JOB" -ge 1 ]; then
+  JOB_STATUS=$(kubectl get job -n cloudnative-pg postgres-seed-data -o jsonpath='{.status.conditions[?(@.type=="Complete")].status}' 2>/dev/null || echo "Unknown")
+  if [ "$JOB_STATUS" == "True" ]; then
+    echo -e "${GREEN}✅ PASS${NC} - Seed data job completed"
+  else
+    echo -e "${YELLOW}⚠️  WARN${NC} - Seed data job not completed yet (may still be running)"
+  fi
+else
+  echo -e "${YELLOW}⚠️  WARN${NC} - Seed data job not found"
+fi
+
+echo ""
 echo -e "${YELLOW}3️⃣  Verificando ClickHouse...${NC}"
 test_component "ClickHouse Pods" \
   "kubectl get pods -n clickhouse --no-headers 2>/dev/null | grep -E 'clickhouse-cluster|clickhouse-.*-[0-9]' | grep Running | wc -l" \

@@ -1,0 +1,235 @@
+# Kubernetes Job to seed PostgreSQL with test data
+# Runs after PostgreSQL cluster is ready
+# Populates tables: users, orders, events with realistic data
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-seed-data
+  namespace: cloudnative-pg
+data:
+  seed-data.sql: |
+    -- Seed Data for PostgreSQL (CDC Testing)
+    -- This script populates test data for replication to ClickHouse
+
+    -- ============================================
+    -- 1. USERS TABLE
+    -- ============================================
+    INSERT INTO users (username, email, created_at) VALUES
+      ('alice_johnson', 'alice.johnson@example.com', '2024-01-15 10:30:00'),
+      ('bob_smith', 'bob.smith@example.com', '2024-01-16 14:20:00'),
+      ('charlie_brown', 'charlie.brown@example.com', '2024-01-17 09:15:00'),
+      ('diana_prince', 'diana.prince@example.com', '2024-01-18 16:45:00'),
+      ('eve_anderson', 'eve.anderson@example.com', '2024-01-19 11:00:00'),
+      ('frank_castle', 'frank.castle@example.com', '2024-01-20 13:30:00'),
+      ('grace_hopper', 'grace.hopper@example.com', '2024-01-21 08:45:00'),
+      ('henry_ford', 'henry.ford@example.com', '2024-01-22 15:10:00'),
+      ('iris_west', 'iris.west@example.com', '2024-01-23 10:25:00'),
+      ('jack_ryan', 'jack.ryan@example.com', '2024-01-24 12:40:00')
+    ON CONFLICT (username) DO NOTHING;
+
+    -- ============================================
+    -- 2. ORDERS TABLE
+    -- ============================================
+    INSERT INTO orders (user_id, product_name, quantity, price, status, created_at) VALUES
+      -- Alice's orders
+      (1, 'Laptop Dell XPS 15', 1, 1499.99, 'completed', '2024-01-16 11:00:00'),
+      (1, 'USB-C Hub', 1, 49.99, 'completed', '2024-01-16 11:05:00'),
+      (1, 'Wireless Mouse', 1, 29.99, 'shipped', '2024-01-25 14:20:00'),
+
+      -- Bob's orders
+      (2, 'iPhone 15 Pro', 1, 999.99, 'completed', '2024-01-17 15:30:00'),
+      (2, 'AirPods Pro', 1, 249.99, 'completed', '2024-01-17 15:35:00'),
+      (2, 'iPhone Case', 2, 19.99, 'processing', '2024-01-26 09:10:00'),
+
+      -- Charlie's orders
+      (3, 'Gaming PC', 1, 2499.99, 'completed', '2024-01-18 10:00:00'),
+      (3, 'Mechanical Keyboard', 1, 149.99, 'completed', '2024-01-18 10:10:00'),
+      (3, 'Gaming Mouse', 1, 79.99, 'shipped', '2024-01-27 16:45:00'),
+      (3, 'Monitor 27 4K', 2, 599.99, 'processing', '2024-01-27 16:50:00'),
+
+      -- Diana's orders
+      (4, 'MacBook Pro M3', 1, 2999.99, 'completed', '2024-01-19 17:00:00'),
+      (4, 'Magic Keyboard', 1, 99.99, 'shipped', '2024-01-28 11:30:00'),
+
+      -- Eve's orders
+      (5, 'Samsung Galaxy S24', 1, 799.99, 'completed', '2024-01-20 12:15:00'),
+      (5, 'Galaxy Buds', 1, 149.99, 'completed', '2024-01-20 12:20:00'),
+      (5, 'Phone Stand', 1, 15.99, 'cancelled', '2024-01-21 09:00:00'),
+
+      -- Frank's orders
+      (6, 'PlayStation 5', 1, 499.99, 'completed', '2024-01-21 14:00:00'),
+      (6, 'PS5 Controller', 2, 69.99, 'completed', '2024-01-21 14:05:00'),
+      (6, 'PS5 Games Bundle', 1, 199.99, 'shipped', '2024-01-28 13:20:00'),
+
+      -- Grace's orders
+      (7, 'iPad Air', 1, 599.99, 'completed', '2024-01-22 09:30:00'),
+      (7, 'Apple Pencil', 1, 129.99, 'completed', '2024-01-22 09:35:00'),
+
+      -- Henry's orders
+      (8, 'Kindle Paperwhite', 1, 139.99, 'completed', '2024-01-23 15:45:00'),
+      (8, 'Kindle Cover', 1, 29.99, 'shipped', '2024-01-29 10:15:00'),
+
+      -- Iris's orders
+      (9, 'Smart Watch', 1, 299.99, 'processing', '2024-01-24 11:00:00'),
+      (9, 'Watch Bands', 3, 19.99, 'processing', '2024-01-24 11:05:00'),
+
+      -- Jack's orders
+      (10, 'Headphones Sony XM5', 1, 399.99, 'completed', '2024-01-25 13:10:00'),
+      (10, 'Headphone Case', 1, 24.99, 'shipped', '2024-01-29 14:30:00')
+    ON CONFLICT DO NOTHING;
+
+    -- ============================================
+    -- 3. EVENTS TABLE
+    -- ============================================
+    INSERT INTO events (event_type, user_id, metadata, created_at) VALUES
+      -- User login events
+      ('user_login', 1, '{"ip": "192.168.1.100", "device": "Chrome/Mac"}', '2024-01-16 10:00:00'),
+      ('user_login', 2, '{"ip": "192.168.1.101", "device": "Safari/iPhone"}', '2024-01-17 14:00:00'),
+      ('user_login', 3, '{"ip": "192.168.1.102", "device": "Firefox/Windows"}', '2024-01-18 09:00:00'),
+      ('user_login', 4, '{"ip": "192.168.1.103", "device": "Chrome/Mac"}', '2024-01-19 16:30:00'),
+      ('user_login', 5, '{"ip": "192.168.1.104", "device": "Chrome/Android"}', '2024-01-20 11:00:00'),
+
+      -- Purchase events
+      ('order_placed', 1, '{"order_id": 1, "total": 1499.99}', '2024-01-16 11:00:00'),
+      ('order_placed', 2, '{"order_id": 4, "total": 999.99}', '2024-01-17 15:30:00'),
+      ('order_placed', 3, '{"order_id": 7, "total": 2499.99}', '2024-01-18 10:00:00'),
+      ('order_placed', 4, '{"order_id": 11, "total": 2999.99}', '2024-01-19 17:00:00'),
+      ('order_placed', 5, '{"order_id": 13, "total": 799.99}', '2024-01-20 12:15:00'),
+
+      -- Product view events
+      ('product_view', 1, '{"product": "Laptop Dell XPS 15", "category": "computers"}', '2024-01-16 10:45:00'),
+      ('product_view', 2, '{"product": "iPhone 15 Pro", "category": "phones"}', '2024-01-17 15:15:00'),
+      ('product_view', 3, '{"product": "Gaming PC", "category": "computers"}', '2024-01-18 09:45:00'),
+      ('product_view', 4, '{"product": "MacBook Pro M3", "category": "computers"}', '2024-01-19 16:45:00'),
+      ('product_view', 5, '{"product": "Samsung Galaxy S24", "category": "phones"}', '2024-01-20 12:00:00'),
+
+      -- Cart events
+      ('add_to_cart', 1, '{"product": "USB-C Hub", "quantity": 1}', '2024-01-16 10:50:00'),
+      ('add_to_cart', 2, '{"product": "AirPods Pro", "quantity": 1}', '2024-01-17 15:20:00'),
+      ('add_to_cart', 3, '{"product": "Mechanical Keyboard", "quantity": 1}', '2024-01-18 09:55:00'),
+      ('add_to_cart', 4, '{"product": "Magic Keyboard", "quantity": 1}', '2024-01-19 16:50:00'),
+      ('add_to_cart', 5, '{"product": "Galaxy Buds", "quantity": 1}', '2024-01-20 12:10:00'),
+
+      -- Payment events
+      ('payment_completed', 1, '{"order_id": 1, "method": "credit_card", "amount": 1499.99}', '2024-01-16 11:02:00'),
+      ('payment_completed', 2, '{"order_id": 4, "method": "paypal", "amount": 999.99}', '2024-01-17 15:32:00'),
+      ('payment_completed', 3, '{"order_id": 7, "method": "credit_card", "amount": 2499.99}', '2024-01-18 10:02:00'),
+      ('payment_completed', 4, '{"order_id": 11, "method": "apple_pay", "amount": 2999.99}', '2024-01-19 17:02:00'),
+      ('payment_completed', 5, '{"order_id": 13, "method": "credit_card", "amount": 799.99}', '2024-01-20 12:17:00'),
+
+      -- User logout events
+      ('user_logout', 1, '{"session_duration": "45min"}', '2024-01-16 11:30:00'),
+      ('user_logout', 2, '{"session_duration": "30min"}', '2024-01-17 16:00:00'),
+      ('user_logout', 3, '{"session_duration": "60min"}', '2024-01-18 11:00:00'),
+      ('user_logout', 4, '{"session_duration": "35min"}', '2024-01-19 17:30:00'),
+      ('user_logout', 5, '{"session_duration": "25min"}', '2024-01-20 12:45:00')
+    ON CONFLICT DO NOTHING;
+
+    -- ============================================
+    -- Summary Statistics
+    -- ============================================
+    DO $$
+    DECLARE
+      users_count INTEGER;
+      orders_count INTEGER;
+      events_count INTEGER;
+    BEGIN
+      SELECT COUNT(*) INTO users_count FROM users;
+      SELECT COUNT(*) INTO orders_count FROM orders;
+      SELECT COUNT(*) INTO events_count FROM events;
+
+      RAISE NOTICE '========================================';
+      RAISE NOTICE 'Seed Data Summary:';
+      RAISE NOTICE '  Users: %', users_count;
+      RAISE NOTICE '  Orders: %', orders_count;
+      RAISE NOTICE '  Events: %', events_count;
+      RAISE NOTICE '========================================';
+    END $$;
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: postgres-seed-data
+  namespace: cloudnative-pg
+  labels:
+    app: postgres-seed
+spec:
+  ttlSecondsAfterFinished: 86400  # 24 hours
+  backoffLimit: 5
+
+  template:
+    metadata:
+      labels:
+        app: postgres-seed
+    spec:
+      restartPolicy: OnFailure
+
+      initContainers:
+        # Wait for PostgreSQL to be ready
+        - name: wait-for-postgres
+          image: postgres:16-alpine
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo "Waiting for PostgreSQL to be ready..."
+              until pg_isready -h postgres-cluster-rw -p 5432 -U app_user; do
+                echo "  PostgreSQL not ready, waiting 5s..."
+                sleep 5
+              done
+              echo "PostgreSQL is ready!"
+          env:
+            - name: PGUSER
+              value: app_user
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-cluster-app
+                  key: password
+
+      containers:
+        - name: seed-data
+          image: postgres:16-alpine
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              echo "=========================================="
+              echo "PostgreSQL Seed Data Job"
+              echo "=========================================="
+              echo ""
+              echo "Running seed data script..."
+              echo ""
+
+              psql -h postgres-cluster-rw -p 5432 -U app_user -d app_db -f /scripts/seed-data.sql
+
+              echo ""
+              echo "=========================================="
+              echo "Seed data completed successfully!"
+              echo "=========================================="
+              echo ""
+              echo "Verification:"
+              echo "  psql -h localhost -U app_user -d app_db"
+              echo "  SELECT COUNT(*) FROM users;   -- Expected: 10"
+              echo "  SELECT COUNT(*) FROM orders;  -- Expected: 26"
+              echo "  SELECT COUNT(*) FROM events;  -- Expected: 30"
+              echo ""
+
+          env:
+            - name: PGUSER
+              value: app_user
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-cluster-app
+                  key: password
+
+          volumeMounts:
+            - name: seed-script
+              mountPath: /scripts
+
+      volumes:
+        - name: seed-script
+          configMap:
+            name: postgres-seed-data
