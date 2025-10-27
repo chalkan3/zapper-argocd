@@ -21,6 +21,11 @@
 
 ### Quer validar a instalação?
 → Use **[CHECKLIST.md](CHECKLIST.md)** para verificar cada componente
+→ Ou execute **`./test-e2e.sh`** para teste automatizado
+
+### Quer testar os componentes?
+→ Leia **[TESTING_GUIDE.md](TESTING_GUIDE.md)** para testes detalhados
+→ Ou use **[TESTING_QUICKREF.md](TESTING_QUICKREF.md)** para referência rápida
 
 ---
 
