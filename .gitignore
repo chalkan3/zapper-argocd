@@ -7,11 +7,13 @@ charts/*/Chart.lock
 *.tmp
 *.swp
 *~
+*.log
 
 # IDE
 .vscode/
 .idea/
 *.iml
+.DS_Store
 
 # OS
 .DS_Store
@@ -20,3 +22,24 @@ Thumbs.db
 # Secrets (never commit)
 *.secret
 secrets/
+.env
+*.pem
+*.key
+*.crt
+
+# Kubernetes
+kubeconfig
+*.kubeconfig
+
+# Backups
+*.bak
+*.backup
+
+# Test outputs
+test-results/
+coverage/
+
+# Local development
+local/
+scratch/
+temp/

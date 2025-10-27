@@ -1,10 +1,27 @@
 # Zapper ArgoCD GitOps Repository
 
 [![GitOps](https://img.shields.io/badge/GitOps-ArgoCD-orange)](https://argo-cd.readthedocs.io/)
-[![Helm](https://img.shields.io/badge/Helm-Official%20Charts-blue)](https://helm.sh/)
-[![K8s](https://img.shields.io/badge/Kubernetes-K3s-326CE5)](https://k3s.io/)
+[![Helm](https://img.shields.io/badge/Helm-3.x-0F1689?logo=helm)](https://helm.sh/)
+[![Kubernetes](https://img.shields.io/badge/Kubernetes-1.28+-326CE5?logo=kubernetes&logoColor=white)](https://kubernetes.io/)
+[![K3s](https://img.shields.io/badge/K3s-Compatible-FFC61C?logo=k3s)](https://k3s.io/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Maintenance](https://img.shields.io/badge/Maintained-Yes-green.svg)](https://github.com/chalkan3/zapper-argocd/commits/main)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-Repositório GitOps completo para deploy de infraestrutura de dados com ClickHouse, PostgreSQL, PeerDB, Temporal e monitoramento com Prometheus/Grafana.
+> Repositório GitOps completo para deploy de infraestrutura de dados com **ClickHouse** (cluster mode), **PostgreSQL** (CloudNativePG), **PeerDB** (CDC/ETL), **Temporal** (workflows) e **Prometheus/Grafana** (monitoring).
+
+## ⭐ Features
+
+- ✅ **GitOps Completo** - ArgoCD sincroniza tudo automaticamente do Git
+- ✅ **ClickHouse Cluster** - 2 shards, 2 replicas, 3 Keepers (HA)
+- ✅ **PostgreSQL HA** - CloudNativePG com 3 instâncias + dummy data
+- ✅ **CDC em Tempo Real** - PeerDB para replicação PG → CH
+- ✅ **Auto-scaling** - 9 HPAs configurados (CPU/Memory)
+- ✅ **Node Affinity** - Pods distribuídos em 5 workers específicos
+- ✅ **Monitoring Stack** - Prometheus, Grafana, Alertmanager
+- ✅ **Dashboards Prontos** - Kubernetes, ClickHouse, PostgreSQL, CDC
+- ✅ **Testes E2E** - Script automatizado de validação
+- ✅ **Scripts Úteis** - Quickstart, setup, cleanup, testes
 
 ---
 
@@ -149,7 +166,7 @@ zapper-argocd/
 
 ---
 
-## Quick Start
+## ⚡ Quick Start
 
 ```bash
 # 1. Clonar repositório
@@ -157,21 +174,30 @@ git clone https://github.com/chalkan3/zapper-argocd.git
 cd zapper-argocd
 
 # 2. Executar quickstart (instala tudo)
-./quickstart.sh
+./scripts/quickstart.sh
+
+# Ou manualmente:
+make install          # Instala ArgoCD + Deploy apps
+make setup-nodes      # Configura node affinity (opcional)
+make test             # Valida instalação
 
 # 3. Aguardar todos os pods (5-10 min)
 kubectl get pods --all-namespaces -w
 
-# 4. Executar testes E2E
-./test-e2e.sh
+# 4. Acessar serviços
+make port-forward-argocd    # https://localhost:8080 (ArgoCD)
+make port-forward-peerdb    # http://localhost:3000 (PeerDB)
+make port-forward-grafana   # http://localhost:3001 (Grafana)
+```
 
-# 5. Configurar node affinity (se tiver 5 workers)
-# Ver seção "Configuração de Node Affinity" abaixo
+### Comandos Úteis
 
-# 6. Acessar serviços
-kubectl port-forward -n argocd svc/argocd-server 8080:443          # ArgoCD
-kubectl port-forward -n peerdb svc/peerdb 3000:3000                # PeerDB
-kubectl port-forward -n monitoring svc/kube-prometheus-stack-grafana 3001:80  # Grafana
+```bash
+make help                    # Ver todos os comandos disponíveis
+make status                  # Status de todos os componentes
+make test                    # Rodar testes E2E
+make get-all-passwords       # Ver todas as credenciais
+make clean                   # Remover tudo (interativo)
 ```
 
 **Credenciais padrão:**
