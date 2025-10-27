@@ -1,0 +1,33 @@
+# ArgoCD Application for PeerDB Setup Job
+# This job automatically configures CDC mirror after PeerDB is deployed
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: peerdb-setup
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/chalkan3/zapper-argocd.git
+    targetRevision: main
+    path: manifests/peerdb
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: peerdb
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+
+  # Sync wave: deploy after PeerDB is ready
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true

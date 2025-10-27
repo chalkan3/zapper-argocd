@@ -407,9 +407,44 @@ kubectl patch deployment metrics-server -n kube-system --type='json' \
 
 ## Configuração do CDC (PeerDB)
 
-Após o deploy, configure a replicação PostgreSQL → ClickHouse:
+### 🚀 Configuração Automática (Recomendado)
 
-### 1. Acessar PeerDB UI
+O CDC mirror é configurado **automaticamente** via Kubernetes Job após o deploy:
+
+```bash
+# O Job executa automaticamente, mas você pode verificar:
+kubectl get job -n peerdb peerdb-setup-mirror
+
+# Ou executar manualmente:
+make setup-cdc
+
+# Ou usando o script:
+./scripts/setup-peerdb-mirror.sh
+```
+
+**O que é configurado automaticamente:**
+- ✅ PostgreSQL Peer (source): `postgres-source`
+- ✅ ClickHouse Peer (destination): `clickhouse-destination`
+- ✅ CDC Mirror: `pg-to-ch-mirror`
+- ✅ Tabelas: `users`, `orders`, `events`
+- ✅ Initial snapshot + real-time CDC
+
+### 📋 Verificar Configuração Automática
+
+```bash
+# 1. Verificar status do Job
+kubectl logs -n peerdb job/peerdb-setup-mirror
+
+# 2. Acessar PeerDB UI para ver mirrors
+kubectl port-forward -n peerdb svc/peerdb 3000:3000
+# http://localhost:3000
+```
+
+### 🔧 Configuração Manual (Opcional)
+
+Se preferir configurar manualmente via UI:
+
+#### 1. Acessar PeerDB UI
 
 ```bash
 kubectl port-forward -n peerdb svc/peerdb 3000:3000
@@ -417,7 +452,7 @@ kubectl port-forward -n peerdb svc/peerdb 3000:3000
 
 Acesse: **http://localhost:3000**
 
-### 2. Obter Credenciais
+#### 2. Obter Credenciais
 
 ```bash
 # PostgreSQL (CloudNativePG) - Source
@@ -429,7 +464,7 @@ echo "PostgreSQL Password: $PGPASSWORD"
 # Pass: admin123
 ```
 
-### 3. Criar PostgreSQL Peer (Source)
+#### 3. Criar PostgreSQL Peer (Source)
 
 Na UI do PeerDB:
 
@@ -444,7 +479,7 @@ Na UI do PeerDB:
    - **Password**: `[senha obtida acima]`
 4. Clique em **"Validate"** → **"Create"**
 
-### 4. Criar ClickHouse Peer (Destination)
+#### 4. Criar ClickHouse Peer (Destination)
 
 1. Clique em **"Peers"** → **"New Peer"**
 2. Selecione **"ClickHouse"**
@@ -457,7 +492,7 @@ Na UI do PeerDB:
    - **Password**: `admin123`
 4. Clique em **"Validate"** → **"Create"**
 
-### 5. Criar Mirror (CDC Stream)
+#### 5. Criar Mirror (CDC Stream)
 
 1. Clique em **"Mirrors"** → **"New Mirror"**
 2. Preencha:
@@ -471,7 +506,11 @@ Na UI do PeerDB:
    - ☑ `events`
 4. Clique em **"Create Mirror"**
 
-### 6. Verificar Dummy Data
+---
+
+### ✅ Verificar Replicação
+
+#### 1. Verificar Dummy Data
 
 ```bash
 # PostgreSQL
@@ -490,7 +529,7 @@ psql -h localhost -U app_user -d app_db -c "SELECT COUNT(*) FROM events;"
 # Esperado: 4
 ```
 
-### 7. Verificar Replicação no ClickHouse
+#### 2. Verificar Replicação no ClickHouse
 
 Aguardar 1-2 minutos para sincronização inicial:
 
@@ -511,7 +550,7 @@ clickhouse-client --host localhost --port 9000 --user admin --password admin123 
 # Esperado: 4
 ```
 
-### 8. Testar CDC em Tempo Real
+#### 3. Testar CDC em Tempo Real
 
 ```bash
 # Inserir novo registro no PostgreSQL

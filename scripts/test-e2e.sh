@@ -120,6 +120,20 @@ else
 fi
 
 echo ""
+echo -e "${YELLOW}🔟  Verificando PeerDB Setup Job...${NC}"
+SETUP_JOB=$(kubectl get job -n peerdb peerdb-setup-mirror --no-headers 2>/dev/null | wc -l)
+if [ "$SETUP_JOB" -ge 1 ]; then
+  JOB_STATUS=$(kubectl get job -n peerdb peerdb-setup-mirror -o jsonpath='{.status.conditions[?(@.type=="Complete")].status}' 2>/dev/null || echo "Unknown")
+  if [ "$JOB_STATUS" == "True" ]; then
+    echo -e "${GREEN}✅ PASS${NC} - PeerDB CDC mirror setup completed"
+  else
+    echo -e "${YELLOW}⚠️  WARN${NC} - PeerDB setup job not completed yet (may still be running)"
+  fi
+else
+  echo -e "${YELLOW}⚠️  WARN${NC} - PeerDB setup job not found (CDC not configured)"
+fi
+
+echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 

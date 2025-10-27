@@ -56,6 +56,9 @@ quickstart: ## Run quickstart script (installs everything)
 setup-nodes: ## Setup node affinity (labels and taints)
 	@./scripts/setup-node-affinity.sh
 
+setup-cdc: ## Setup PeerDB CDC mirror automatically
+	@./scripts/setup-peerdb-mirror.sh
+
 # ===================================
 # Status & Monitoring
 # ===================================
