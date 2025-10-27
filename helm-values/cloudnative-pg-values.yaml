@@ -1,0 +1,32 @@
+# CloudNativePG Operator values
+# Chart: https://github.com/cloudnative-pg/charts
+
+# Operator configuration
+fullnameOverride: cnpg-operator
+
+crds:
+  create: true
+
+config:
+  # Enable debug logging
+  data:
+    INHERITED_ANNOTATIONS: ".*"
+    INHERITED_LABELS: ".*"
+
+# Resources
+resources:
+  requests:
+    memory: 128Mi
+    cpu: 100m
+  limits:
+    memory: 256Mi
+    cpu: 200m
+
+# Service account
+serviceAccount:
+  create: true
+
+# Webhook
+webhook:
+  enabled: true
+  port: 9443

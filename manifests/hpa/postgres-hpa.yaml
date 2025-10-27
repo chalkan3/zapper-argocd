@@ -1,0 +1,80 @@
+# HPA for CloudNativePG
+# Note: CloudNativePG manages replicas internally, but we can scale read replicas
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: postgres-cluster-hpa
+  namespace: cloudnative-pg
+spec:
+  scaleTargetRef:
+    apiVersion: postgresql.cnpg.io/v1
+    kind: Cluster
+    name: postgres-cluster
+  minReplicas: 3
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 600  # 10 min - cautious with database
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 300  # Scale down 1 replica every 5 min
+    scaleUp:
+      stabilizationWindowSeconds: 120
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 60
+---
+# HPA for PeerDB PostgreSQL (metadata)
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: peerdb-postgresql-hpa
+  namespace: peerdb
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: StatefulSet
+    name: peerdb-postgresql
+  minReplicas: 1
+  maxReplicas: 3
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 75
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 600
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 300
+    scaleUp:
+      stabilizationWindowSeconds: 180
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 60

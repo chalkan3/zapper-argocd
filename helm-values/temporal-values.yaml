@@ -1,0 +1,75 @@
+# Temporal Workflow Engine
+# Chart: https://github.com/temporalio/helm-charts
+
+server:
+  replicaCount: 1
+
+  config:
+    persistence:
+      default:
+        driver: "sql"
+        sql:
+          driver: "postgres"
+          host: "peerdb-postgresql"
+          port: 5432
+          database: "temporal"
+          user: "peerdb"
+          password: "peerdb123"
+          maxConns: 20
+          maxIdleConns: 20
+
+      visibility:
+        driver: "sql"
+        sql:
+          driver: "postgres"
+          host: "peerdb-postgresql"
+          port: 5432
+          database: "temporal_visibility"
+          user: "peerdb"
+          password: "peerdb123"
+          maxConns: 20
+          maxIdleConns: 20
+
+  resources:
+    requests:
+      memory: 512Mi
+      cpu: 500m
+    limits:
+      memory: 1Gi
+      cpu: 1000m
+
+admintools:
+  enabled: true
+  resources:
+    requests:
+      memory: 128Mi
+      cpu: 100m
+
+web:
+  enabled: true
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests:
+      memory: 128Mi
+      cpu: 100m
+
+# Disable other persistence options
+cassandra:
+  enabled: false
+
+mysql:
+  enabled: false
+
+postgresql:
+  enabled: false
+
+prometheus:
+  enabled: false
+
+grafana:
+  enabled: false
+
+elasticsearch:
+  enabled: false

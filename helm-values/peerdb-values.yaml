@@ -1,0 +1,52 @@
+# PeerDB deployment configuration
+# Custom manifests pois PeerDB não tem Helm chart oficial ainda
+
+peerdb:
+  image:
+    repository: ghcr.io/peerdb-io/peerdb-server
+    tag: latest
+    pullPolicy: Always
+
+  service:
+    type: ClusterIP
+    port: 3000
+
+  env:
+    PEERDB_CATALOG_HOST: "peerdb-postgresql"
+    PEERDB_CATALOG_PORT: "5432"
+    PEERDB_CATALOG_USER: "peerdb"
+    PEERDB_CATALOG_PASSWORD: "peerdb123"
+    PEERDB_CATALOG_DATABASE: "peerdb_metadata"
+    TEMPORAL_HOST_PORT: "peerdb-temporal-frontend:7233"
+
+  resources:
+    requests:
+      memory: 512Mi
+      cpu: 500m
+    limits:
+      memory: 2Gi
+      cpu: 2000m
+
+flowWorker:
+  image:
+    repository: ghcr.io/peerdb-io/peerdb-flow-worker
+    tag: latest
+    pullPolicy: Always
+
+  replicas: 2
+
+  env:
+    PEERDB_CATALOG_HOST: "peerdb-postgresql"
+    PEERDB_CATALOG_PORT: "5432"
+    PEERDB_CATALOG_USER: "peerdb"
+    PEERDB_CATALOG_PASSWORD: "peerdb123"
+    PEERDB_CATALOG_DATABASE: "peerdb_metadata"
+    TEMPORAL_HOST_PORT: "peerdb-temporal-frontend:7233"
+
+  resources:
+    requests:
+      memory: 512Mi
+      cpu: 500m
+    limits:
+      memory: 2Gi
+      cpu: 2000m

@@ -1,0 +1,101 @@
+# PostgreSQL Cluster Configuration
+# Este arquivo será aplicado como um manifest adicional via ArgoCD
+
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: postgres-cluster
+  namespace: cloudnative-pg
+spec:
+  instances: 3
+
+  # Node affinity - Deploy only on postgres nodes
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: workload
+                operator: In
+                values:
+                  - postgres
+
+  # Tolerations for postgres nodes
+  tolerations:
+    - key: workload
+      operator: Equal
+      value: postgres
+      effect: NoSchedule
+
+  # PostgreSQL configuration for CDC
+  postgresql:
+    parameters:
+      wal_level: "logical"
+      max_wal_senders: "10"
+      max_replication_slots: "10"
+      max_connections: "200"
+
+  # Storage configuration
+  storage:
+    size: 10Gi
+
+  # Resources for HPA
+  resources:
+    requests:
+      memory: "1Gi"
+      cpu: "500m"
+    limits:
+      memory: "4Gi"
+      cpu: "2000m"
+
+  # Bootstrap with initial data
+  bootstrap:
+    initdb:
+      database: app_db
+      owner: app_user
+      secret:
+        name: postgres-cluster-app
+      postInitSQL:
+        - CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
+            username VARCHAR(50) NOT NULL,
+            email VARCHAR(100) NOT NULL,
+            created_at TIMESTAMP DEFAULT NOW()
+          );
+        - CREATE TABLE IF NOT EXISTS orders (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER REFERENCES users(id),
+            product_name VARCHAR(100),
+            quantity INTEGER,
+            amount DECIMAL(10,2),
+            created_at TIMESTAMP DEFAULT NOW()
+          );
+        - CREATE TABLE IF NOT EXISTS events (
+            id SERIAL PRIMARY KEY,
+            event_type VARCHAR(50),
+            event_data JSONB,
+            created_at TIMESTAMP DEFAULT NOW()
+          );
+        - INSERT INTO users (username, email) VALUES
+            ('alice', 'alice@example.com'),
+            ('bob', 'bob@example.com'),
+            ('charlie', 'charlie@example.com'),
+            ('diana', 'diana@example.com');
+        - INSERT INTO orders (user_id, product_name, quantity, amount) VALUES
+            (1, 'Laptop', 1, 1299.99),
+            (1, 'Mouse', 2, 29.99),
+            (2, 'Keyboard', 1, 89.99),
+            (3, 'Monitor', 2, 399.99),
+            (4, 'Headphones', 1, 199.99);
+        - INSERT INTO events (event_type, event_data) VALUES
+            ('user_login', '{"user_id":1,"ip":"192.168.1.1"}'),
+            ('user_login', '{"user_id":2,"ip":"192.168.1.2"}'),
+            ('order_created', '{"order_id":1,"amount":1299.99}'),
+            ('order_created', '{"order_id":2,"amount":29.99}');
+        - ALTER TABLE users REPLICA IDENTITY FULL;
+        - ALTER TABLE orders REPLICA IDENTITY FULL;
+        - ALTER TABLE events REPLICA IDENTITY FULL;
+
+  # Monitoring
+  monitoring:
+    enablePodMonitor: false

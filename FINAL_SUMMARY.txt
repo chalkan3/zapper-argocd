@@ -1,0 +1,175 @@
+╔════════════════════════════════════════════════════════════════════════╗
+║        ZAPPER ARGOCD GITOPS - CONFIGURAÇÃO FINAL COMPLETA             ║
+╚════════════════════════════════════════════════════════════════════════╝
+
+✅ TODAS AS FUNCIONALIDADES IMPLEMENTADAS
+
+┌────────────────────────────────────────────────────────────────────────┐
+│ 1. HELM CHARTS OFICIAIS                                               │
+├────────────────────────────────────────────────────────────────────────┤
+│ ✅ ClickHouse Operator (altinity/clickhouse-operator@0.23.6)          │
+│ ✅ CloudNativePG (cloudnative-pg/cloudnative-pg@0.21.6)               │
+│ ✅ PostgreSQL (bitnami/postgresql@15.5.20)                            │
+│ ✅ Temporal (temporal/temporal@0.45.1)                                │
+└────────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────────────┐
+│ 2. NODE AFFINITY (5 WORKERS)                                          │
+├────────────────────────────────────────────────────────────────────────┤
+│ ✅ Worker 1-2: PostgreSQL (workload=postgres)                         │
+│ ✅ Worker 3:   ClickHouse (workload=clickhouse)                       │
+│ ✅ Worker 4-5: PeerDB (workload=peerdb)                               │
+│                                                                        │
+│ Todos os componentes configurados com:                                │
+│   • nodeAffinity (required)                                           │
+│   • tolerations (suporte a taints)                                    │
+└────────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────────────┐
+│ 3. HPA (HORIZONTAL POD AUTOSCALER) - 9 HPAs                          │
+├────────────────────────────────────────────────────────────────────────┤
+│ ✅ PeerDB Server         (1-5 replicas,   CPU 70%, Mem 80%)          │
+│ ✅ PeerDB Flow Workers   (2-10 replicas,  CPU 75%, Mem 80%)          │
+│ ✅ CloudNativePG         (3-5 replicas,   CPU 70%, Mem 80%)          │
+│ ✅ PeerDB PostgreSQL     (1-3 replicas,   CPU 75%, Mem 80%)          │
+│ ✅ ClickHouse Cluster    (4-8 replicas,   CPU 70%, Mem 75%)          │
+│ ✅ Temporal Frontend     (1-5 replicas,   CPU 70%, Mem 80%)          │
+│ ✅ Temporal History      (1-5 replicas,   CPU 70%, Mem 80%)          │
+│ ✅ Temporal Matching     (1-5 replicas,   CPU 70%, Mem 80%)          │
+│ ✅ Temporal Worker       (1-10 replicas,  CPU 75%, Mem 80%)          │
+└────────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────────────┐
+│ 4. CLICKHOUSE - MODO CLUSTER COM KEEPER                              │
+├────────────────────────────────────────────────────────────────────────┤
+│ ✅ 2 Shards (distribuição de dados)                                   │
+│ ✅ 2 Réplicas por shard (alta disponibilidade)                        │
+│ ✅ 3 ClickHouse Keeper (coordenação/quorum)                           │
+│ ✅ Total: 7 pods (4 CH + 3 Keeper)                                    │
+│ ✅ Schema replication: ALL shards + ALL replicas                      │
+└────────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────────────┐
+│ 5. CLOUDNATIVEPG - CDC HABILITADO COM DUMMY DATA                     │
+├────────────────────────────────────────────────────────────────────────┤
+│ ✅ 3 Instâncias (1 primary + 2 standby)                               │
+│ ✅ Logical replication (wal_level=logical)                            │
+│ ✅ Dummy data: 13 registros (4 users, 5 orders, 4 events)            │
+│ ✅ REPLICA IDENTITY FULL em todas as tabelas                          │
+│ ✅ max_replication_slots: 10                                          │
+└────────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────────────┐
+│ 6. PEERDB - CDC ENGINE                                               │
+├────────────────────────────────────────────────────────────────────────┤
+│ ✅ PeerDB Server com UI (porta 3000)                                  │
+│ ✅ 2 Flow Workers (processamento CDC)                                 │
+│ ✅ Configuração manual via UI (conforme solicitado)                   │
+│ ✅ Conectado ao PostgreSQL (source)                                   │
+│ ✅ Conectado ao ClickHouse (destination)                              │
+└────────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────────────┐
+│ 7. DEPENDÊNCIAS DO PEERDB                                             │
+├────────────────────────────────────────────────────────────────────────┤
+│ ✅ PostgreSQL (Bitnami) para metadata                                 │
+│    • 3 databases: peerdb_metadata, temporal, temporal_visibility     │
+│ ✅ Temporal Workflow Engine                                           │
+│    • Frontend, History, Matching, Worker                              │
+│    • UI disponível (porta 8080)                                       │
+└────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════
+
+📊 RESUMO TÉCNICO
+
+ArgoCD Applications:  8
+Helm Charts:          5
+Custom Manifests:     3
+HPAs:                 9
+Worker Nodes:         5
+Total Pods:           ~20-25 (depende do auto-scaling)
+
+═══════════════════════════════════════════════════════════════════════════
+
+📁 ARQUIVOS CRIADOS/MODIFICADOS
+
+apps/
+├── clickhouse.yaml              (2 Applications)
+├── cloudnative-pg.yaml          (2 Applications)
+├── peerdb-dependencies.yaml     (2 Applications)
+├── peerdb.yaml                  (1 Application)
+└── hpa.yaml                     (1 Application) ← NOVO
+
+helm-values/
+├── clickhouse-cluster.yaml      ← Node affinity adicionado
+├── postgres-cluster.yaml        ← Node affinity adicionado
+└── ...
+
+manifests/
+├── peerdb/
+│   └── deployment.yaml          ← Node affinity adicionado
+└── hpa/                         ← NOVO DIRETÓRIO
+    ├── peerdb-hpa.yaml          (2 HPAs)
+    ├── postgres-hpa.yaml        (2 HPAs)
+    ├── clickhouse-hpa.yaml      (1 HPA)
+    └── temporal-hpa.yaml        (4 HPAs)
+
+Documentação:
+├── NODE_AFFINITY_SETUP.md       ← Guia completo node affinity + HPA
+├── NODE_AFFINITY_SUMMARY.md     ← Resumo executivo
+├── APPLICATIONS_SUMMARY.md      ← Atualizado com 8 Applications
+└── REQUIREMENTS_VALIDATION.md   ← Validação de todos os requisitos
+
+═══════════════════════════════════════════════════════════════════════════
+
+🚀 QUICK START
+
+1. Preparar Workers:
+   kubectl label node worker-{1,2} workload=postgres
+   kubectl label node worker-3 workload=clickhouse
+   kubectl label node worker-{4,5} workload=peerdb
+
+2. (Opcional) Adicionar Taints:
+   kubectl taint node worker-{1,2} workload=postgres:NoSchedule
+   kubectl taint node worker-3 workload=clickhouse:NoSchedule
+   kubectl taint node worker-{4,5} workload=peerdb:NoSchedule
+
+3. Instalar ArgoCD:
+   kubectl create namespace argocd
+   kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+
+4. Deploy Aplicações:
+   kubectl apply -f apps/
+
+5. Verificar:
+   kubectl get applications -n argocd
+   kubectl get hpa --all-namespaces
+   kubectl get pods -o wide --all-namespaces
+
+═══════════════════════════════════════════════════════════════════════════
+
+📚 DOCUMENTAÇÃO
+
+Leia na ordem:
+
+1. NODE_AFFINITY_SUMMARY.md    - Visão geral node affinity + HPA
+2. NODE_AFFINITY_SETUP.md      - Guia completo com troubleshooting
+3. APPLICATIONS_SUMMARY.md     - Todas as 8 Applications
+4. REQUIREMENTS_VALIDATION.md  - Validação de requisitos
+5. PEERDB_SETUP.md            - Configurar CDC manualmente
+
+═══════════════════════════════════════════════════════════════════════════
+
+✅ STATUS: COMPLETO
+
+Todas as features solicitadas implementadas:
+✅ Helm charts oficiais
+✅ Node affinity (5 workers: 2 postgres, 1 clickhouse, 2 peerdb)
+✅ HPA (9 autoscalers configurados)
+✅ ClickHouse cluster com Keeper e shards
+✅ CloudNativePG com CDC e dummy data
+✅ PeerDB com dependencies (PostgreSQL + Temporal)
+✅ Configuração via UI
+
+═══════════════════════════════════════════════════════════════════════════

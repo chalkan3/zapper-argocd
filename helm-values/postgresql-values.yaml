@@ -1,0 +1,30 @@
+# PostgreSQL (Bitnami) for PeerDB metadata
+# Chart: https://github.com/bitnami/charts/tree/main/bitnami/postgresql
+
+auth:
+  username: peerdb
+  password: peerdb123
+  database: peerdb_metadata
+  postgresPassword: peerdb123
+
+primary:
+  persistence:
+    enabled: true
+    size: 8Gi
+
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 250m
+    limits:
+      memory: 512Mi
+      cpu: 500m
+
+  initdb:
+    scripts:
+      init.sql: |
+        CREATE DATABASE temporal;
+        CREATE DATABASE temporal_visibility;
+
+metrics:
+  enabled: false

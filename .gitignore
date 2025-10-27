@@ -1,0 +1,22 @@
+# Helm
+*.lock
+charts/*/charts/
+charts/*/Chart.lock
+
+# Temporary files
+*.tmp
+*.swp
+*~
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets (never commit)
+*.secret
+secrets/

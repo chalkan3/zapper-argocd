@@ -1,0 +1,187 @@
+# ClickHouse Cluster Configuration
+# Este arquivo será aplicado como um manifest adicional via ArgoCD
+
+apiVersion: "clickhouse.altinity.com/v1"
+kind: "ClickHouseInstallation"
+metadata:
+  name: clickhouse-cluster
+  namespace: clickhouse
+spec:
+  configuration:
+    users:
+      admin/password: admin123
+      admin/networks/ip:
+        - "0.0.0.0/0"
+      admin/profile: default
+      admin/quota: default
+
+    # ClickHouse Keeper configuration for replication
+    zookeeper:
+      nodes:
+        - host: clickhouse-keeper-0.clickhouse-keeper-headless.clickhouse.svc.cluster.local
+          port: 9181
+        - host: clickhouse-keeper-1.clickhouse-keeper-headless.clickhouse.svc.cluster.local
+          port: 9181
+        - host: clickhouse-keeper-2.clickhouse-keeper-headless.clickhouse.svc.cluster.local
+          port: 9181
+
+    clusters:
+      - name: "clickhouse-cluster"
+        layout:
+          shardsCount: 2
+          replicasCount: 2
+
+        schemaPolicy:
+          replica: "all"
+          shard: "all"
+
+  defaults:
+    templates:
+      dataVolumeClaimTemplate: data-volume
+      logVolumeClaimTemplate: log-volume
+      serviceTemplate: service-template
+      podTemplate: clickhouse-pod-template
+
+  templates:
+    podTemplates:
+      - name: clickhouse-pod-template
+        spec:
+          # Node affinity - Deploy only on clickhouse nodes
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
+                      - key: workload
+                        operator: In
+                        values:
+                          - clickhouse
+
+          # Tolerations for clickhouse nodes
+          tolerations:
+            - key: workload
+              operator: Equal
+              value: clickhouse
+              effect: NoSchedule
+
+          containers:
+            - name: clickhouse
+              resources:
+                requests:
+                  memory: "2Gi"
+                  cpu: "1000m"
+                limits:
+                  memory: "8Gi"
+                  cpu: "4000m"
+
+    volumeClaimTemplates:
+      - name: data-volume
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 10Gi
+
+      - name: log-volume
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 5Gi
+
+    serviceTemplates:
+      - name: service-template
+        spec:
+          ports:
+            - name: http
+              port: 8123
+              targetPort: 8123
+            - name: native
+              port: 9000
+              targetPort: 9000
+          type: ClusterIP
+---
+apiVersion: "clickhouse.altinity.com/v1"
+kind: "ClickHouseKeeperInstallation"
+metadata:
+  name: clickhouse-keeper
+  namespace: clickhouse
+spec:
+  configuration:
+    settings:
+      logger/level: "information"
+      logger/console: "true"
+
+  clusters:
+    - name: keeper-cluster
+      layout:
+        replicasCount: 3
+
+  templates:
+    podTemplates:
+      - name: keeper-pod-template
+        spec:
+          # Node affinity - Deploy only on clickhouse nodes
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
+                      - key: workload
+                        operator: In
+                        values:
+                          - clickhouse
+
+          # Tolerations for clickhouse nodes
+          tolerations:
+            - key: workload
+              operator: Equal
+              value: clickhouse
+              effect: NoSchedule
+
+          containers:
+            - name: clickhouse-keeper
+              image: clickhouse/clickhouse-keeper:23.8
+              ports:
+                - containerPort: 9181
+                  name: client
+                - containerPort: 9234
+                  name: raft
+              volumeMounts:
+                - name: keeper-data
+                  mountPath: /var/lib/clickhouse-keeper
+              resources:
+                requests:
+                  memory: "512Mi"
+                  cpu: "500m"
+                limits:
+                  memory: "2Gi"
+                  cpu: "1000m"
+
+    volumeClaimTemplates:
+      - name: keeper-data
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: clickhouse-keeper-headless
+  namespace: clickhouse
+spec:
+  ports:
+    - name: client
+      port: 9181
+      targetPort: 9181
+    - name: raft
+      port: 9234
+      targetPort: 9234
+  clusterIP: None
+  selector:
+    clickhouse.altinity.com/keeper: clickhouse-keeper

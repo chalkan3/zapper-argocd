@@ -1,0 +1,23 @@
+# ClickHouse Operator values
+# Chart: https://github.com/Altinity/clickhouse-operator
+
+operator:
+  image:
+    repository: altinity/clickhouse-operator
+    tag: 0.23.6
+
+  # Metrics
+  metrics:
+    enabled: true
+
+  # Resources
+  resources:
+    requests:
+      memory: 128Mi
+      cpu: 100m
+    limits:
+      memory: 256Mi
+      cpu: 200m
+
+# Installation namespace
+# Será criado automaticamente pelo ArgoCD

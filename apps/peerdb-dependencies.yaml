@@ -1,0 +1,198 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: peerdb-postgresql
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  source:
+    repoURL: https://charts.bitnami.com/bitnami
+    targetRevision: 15.5.20
+    chart: postgresql
+    helm:
+      releaseName: peerdb
+      values: |
+        auth:
+          username: peerdb
+          password: peerdb123
+          database: peerdb_metadata
+          postgresPassword: peerdb123
+
+        primary:
+          persistence:
+            enabled: true
+            size: 8Gi
+
+          # Node affinity - Deploy only on peerdb nodes
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
+                      - key: workload
+                        operator: In
+                        values:
+                          - peerdb
+
+          # Tolerations for peerdb nodes
+          tolerations:
+            - key: workload
+              operator: Equal
+              value: peerdb
+              effect: NoSchedule
+
+          resources:
+            requests:
+              memory: 512Mi
+              cpu: 500m
+            limits:
+              memory: 2Gi
+              cpu: 2000m
+
+          initdb:
+            scripts:
+              init.sql: |
+                CREATE DATABASE temporal;
+                CREATE DATABASE temporal_visibility;
+
+        metrics:
+          enabled: false
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: peerdb
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: peerdb-temporal
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  source:
+    repoURL: https://go.temporal.io/helm-charts
+    targetRevision: 0.45.1
+    chart: temporal
+    helm:
+      releaseName: peerdb
+      values: |
+        server:
+          replicaCount: 1
+
+          # Node affinity - Deploy only on peerdb nodes
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
+                      - key: workload
+                        operator: In
+                        values:
+                          - peerdb
+
+          # Tolerations for peerdb nodes
+          tolerations:
+            - key: workload
+              operator: Equal
+              value: peerdb
+              effect: NoSchedule
+
+          config:
+            persistence:
+              default:
+                driver: "sql"
+                sql:
+                  driver: "postgres12"
+                  host: "peerdb-postgresql"
+                  port: 5432
+                  database: "temporal"
+                  user: "peerdb"
+                  password: "peerdb123"
+                  maxConns: 20
+                  maxIdleConns: 20
+
+              visibility:
+                driver: "sql"
+                sql:
+                  driver: "postgres12"
+                  host: "peerdb-postgresql"
+                  port: 5432
+                  database: "temporal_visibility"
+                  user: "peerdb"
+                  password: "peerdb123"
+                  maxConns: 20
+                  maxIdleConns: 20
+
+          resources:
+            requests:
+              memory: 512Mi
+              cpu: 500m
+            limits:
+              memory: 1Gi
+              cpu: 1000m
+
+        admintools:
+          enabled: true
+
+        web:
+          enabled: true
+          service:
+            type: ClusterIP
+            port: 8080
+
+        cassandra:
+          enabled: false
+
+        mysql:
+          enabled: false
+
+        postgresql:
+          enabled: false
+
+        prometheus:
+          enabled: false
+
+        grafana:
+          enabled: false
+
+        elasticsearch:
+          enabled: false
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: peerdb
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
