@@ -64,14 +64,15 @@ data:
         print_info("Waiting for PeerDB to be ready...")
         for i in range(max_retries):
             try:
-                response = requests.get(f"{base_url}/api/health", timeout=5)
-                if response.status_code == 200:
+                # PeerDB doesn't have /api/health, try listing peers
+                response = requests.get(f"{base_url}/api/v1/peers", timeout=5)
+                if response.status_code in [200, 404]:  # 404 means no peers yet, but server is up
                     print_success("PeerDB is ready!")
                     return True
-            except Exception:
+            except Exception as e:
                 pass
-            print(f"  Attempt {i+1}/{max_retries}... waiting 10s")
-            time.sleep(10)
+            print(f"  Attempt {i+1}/{max_retries}... waiting 5s")
+            time.sleep(5)
         print_error("PeerDB did not become ready")
         return False
 
