@@ -165,6 +165,10 @@ spec:
         - CREATE INDEX idx_events_created_at ON events(created_at);
         - CREATE INDEX idx_events_metadata ON events USING gin(metadata);
 
+        # Grant permissions to app_user
+        - GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO app_user;
+        - GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_user;
+
         # Note: Test data is seeded by the postgres-seed-data Job
         # See: manifests/cloudnative-pg/seed-data-job.yaml
 
