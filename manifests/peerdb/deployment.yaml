@@ -38,8 +38,8 @@ spec:
 
       containers:
         - name: peerdb-server
-          image: ghcr.io/peerdb-io/peerdb-server:latest
-          imagePullPolicy: Always
+          image: ghcr.io/peerdb-io/peerdb-server:stable-v0.34.2
+          imagePullPolicy: IfNotPresent
           ports:
             - name: http
               containerPort: 3000
@@ -120,8 +120,8 @@ spec:
 
       containers:
         - name: flow-worker
-          image: ghcr.io/peerdb-io/peerdb-flow-worker:latest
-          imagePullPolicy: Always
+          image: ghcr.io/peerdb-io/flow-worker:stable-v0.34.2
+          imagePullPolicy: IfNotPresent
           env:
             - name: PEERDB_CATALOG_HOST
               value: "peerdb-postgresql"
