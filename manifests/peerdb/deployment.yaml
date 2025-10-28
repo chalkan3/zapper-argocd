@@ -213,6 +213,67 @@ spec:
               memory: 1Gi
               cpu: 500m
 ---
+# PeerDB Flow Snapshot Worker
+# Handles initial snapshot tasks on snapshot-flow-task-queue
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: peerdb-flow-snapshot-worker
+  namespace: peerdb
+  labels:
+    app: peerdb
+    component: flow-snapshot-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: peerdb
+      component: flow-snapshot-worker
+  template:
+    metadata:
+      labels:
+        app: peerdb
+        component: flow-snapshot-worker
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: workload
+                    operator: In
+                    values:
+                      - peerdb
+      tolerations:
+        - key: workload
+          operator: Equal
+          value: peerdb
+          effect: NoSchedule
+      containers:
+        - name: flow-snapshot-worker
+          image: ghcr.io/peerdb-io/flow-snapshot-worker:stable-v0.34.2
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: PEERDB_CATALOG_HOST
+              value: "peerdb-postgresql"
+            - name: PEERDB_CATALOG_PORT
+              value: "5432"
+            - name: PEERDB_CATALOG_USER
+              value: "peerdb"
+            - name: PEERDB_CATALOG_PASSWORD
+              value: "peerdb123"
+            - name: PEERDB_CATALOG_DATABASE
+              value: "peerdb_metadata"
+            - name: TEMPORAL_HOST_PORT
+              value: "peerdb-temporal-frontend:7233"
+          resources:
+            requests:
+              memory: 256Mi
+              cpu: 100m
+            limits:
+              memory: 512Mi
+              cpu: 250m
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
