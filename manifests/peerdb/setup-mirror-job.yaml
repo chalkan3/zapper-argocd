@@ -243,7 +243,7 @@ spec:
               done
 
               echo "Waiting for ClickHouse to be ready..."
-              until kubectl get pods -n clickhouse -l app=clickhouse | grep Running; do
+              until kubectl get pods -n clickhouse -l clickhouse.altinity.com/chi=clickhouse-cluster | grep Running; do
                 sleep 10
               done
 
