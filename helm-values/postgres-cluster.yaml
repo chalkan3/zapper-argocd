@@ -29,6 +29,8 @@ spec:
 
   # PostgreSQL configuration for CDC and Performance
   postgresql:
+    pg_hba:
+      - host all all 0.0.0.0/0 md5
     parameters:
       # CDC Configuration
       wal_level: "logical"
@@ -176,8 +178,3 @@ spec:
   # High Availability
   enableSuperuserAccess: true
   primaryUpdateStrategy: unsupervised
-
-  # Connection pooling
-  postgresql:
-    pg_hba:
-      - host all all 0.0.0.0/0 md5

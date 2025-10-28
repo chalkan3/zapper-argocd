@@ -1,0 +1,65 @@
+# Pooler CRD for CloudNativePG
+# This CRD is required by the operator but sometimes not installed by the Helm chart
+# We ensure it exists by applying it manually
+
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: poolers.postgresql.cnpg.io
+spec:
+  group: postgresql.cnpg.io
+  names:
+    kind: Pooler
+    listKind: PoolerList
+    plural: poolers
+    singular: pooler
+  scope: Namespaced
+  versions:
+  - name: v1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              cluster:
+                type: object
+                properties:
+                  name:
+                    type: string
+              instances:
+                type: integer
+                minimum: 1
+              type:
+                type: string
+                enum:
+                  - rw
+                  - ro
+              pgbouncer:
+                type: object
+                properties:
+                  poolMode:
+                    type: string
+                    enum:
+                      - session
+                      - transaction
+                      - statement
+                  authQuerySecret:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                  authQuery:
+                    type: string
+                  parameters:
+                    type: object
+                    additionalProperties:
+                      type: string
+          status:
+            type: object
+            properties:
+              instances:
+                type: integer

@@ -153,6 +153,8 @@ kind: Job
 metadata:
   name: postgres-seed-data
   namespace: cloudnative-pg
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"  # Run after cluster (wave 2) is ready
   labels:
     app: postgres-seed
 spec:

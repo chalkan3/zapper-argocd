@@ -10,22 +10,28 @@ metadata:
 spec:
   project: default
 
-  source:
-    repoURL: https://cloudnative-pg.github.io/charts
-    targetRevision: 0.22.0
-    chart: cloudnative-pg
-    helm:
-      releaseName: cnpg-operator
-      values: |
-        crds:
-          create: true
-        resources:
-          requests:
-            memory: 128Mi
-            cpu: 100m
-          limits:
-            memory: 256Mi
-            cpu: 200m
+  sources:
+    # First: Install CRDs manually (including Pooler)
+    - repoURL: https://github.com/chalkan3/zapper-argocd.git
+      targetRevision: main
+      path: manifests/cloudnative-pg
+
+    # Second: Install operator via Helm
+    - repoURL: https://cloudnative-pg.github.io/charts
+      targetRevision: 0.22.0
+      chart: cloudnative-pg
+      helm:
+        releaseName: cnpg-operator
+        values: |
+          crds:
+            create: true
+          resources:
+            requests:
+              memory: 128Mi
+              cpu: 100m
+            limits:
+              memory: 256Mi
+              cpu: 200m
 
   destination:
     server: https://kubernetes.default.svc
