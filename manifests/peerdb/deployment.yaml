@@ -149,6 +149,16 @@ spec:
             limits:
               memory: 1Gi
               cpu: 500m
+          readinessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -212,6 +222,22 @@ spec:
             limits:
               memory: 1Gi
               cpu: 500m
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - pgrep -f flow-worker
+            initialDelaySeconds: 15
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - pgrep -f flow-worker
+            initialDelaySeconds: 30
+            periodSeconds: 10
 ---
 # PeerDB Flow Snapshot Worker
 # Handles initial snapshot tasks on snapshot-flow-task-queue
@@ -273,6 +299,22 @@ spec:
             limits:
               memory: 512Mi
               cpu: 250m
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - pgrep -f flow-snapshot-worker
+            initialDelaySeconds: 15
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - pgrep -f flow-snapshot-worker
+            initialDelaySeconds: 30
+            periodSeconds: 10
 ---
 apiVersion: apps/v1
 kind: Deployment
