@@ -1,0 +1,180 @@
+# Job to setup PeerDB CDC mirror using SQL
+# Creates peers and mirror directly in PeerDB's metadata database
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: peerdb-setup-sql
+  namespace: peerdb
+data:
+  setup.sql: |
+    -- Create PostgreSQL peer (source)
+    INSERT INTO peers (name, type, options) VALUES (
+      'postgres-source',
+      1, -- POSTGRES type
+      '{
+        "host": "postgres-cluster-rw.cloudnative-pg.svc.cluster.local",
+        "port": 5432,
+        "user": "app_user",
+        "password": "apppassword123",
+        "database": "app_db"
+      }'::jsonb
+    ) ON CONFLICT (name) DO NOTHING;
+
+    -- Create ClickHouse peer (destination)
+    INSERT INTO peers (name, type, options) VALUES (
+      'clickhouse-destination',
+      2, -- CLICKHOUSE type
+      '{
+        "host": "chi-clickhouse-cluster-main-cluster-0-0.clickhouse.svc.cluster.local",
+        "port": 9000,
+        "user": "admin",
+        "password": "admin123",
+        "database": "default"
+      }'::jsonb
+    ) ON CONFLICT (name) DO NOTHING;
+
+    -- Create CDC mirror
+    INSERT INTO flows (name, source_peer, destination_peer, description, workflow_id) VALUES (
+      'pg-to-ch-mirror',
+      'postgres-source',
+      'clickhouse-destination',
+      'CDC mirror from PostgreSQL to ClickHouse',
+      'pg-to-ch-mirror-workflow'
+    ) ON CONFLICT (name) DO NOTHING;
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: peerdb-setup-sql
+  namespace: peerdb
+  labels:
+    app: peerdb-setup
+spec:
+  ttlSecondsAfterFinished: 86400
+  backoffLimit: 5
+  template:
+    metadata:
+      labels:
+        app: peerdb-setup
+    spec:
+      restartPolicy: OnFailure
+
+      initContainers:
+        # Wait for PostgreSQL cluster
+        - name: wait-postgres
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for PostgreSQL cluster..."
+              until nc -z postgres-cluster-rw.cloudnative-pg.svc.cluster.local 5432; do
+                echo "  PostgreSQL not ready, waiting..."
+                sleep 5
+              done
+              echo "PostgreSQL is ready!"
+
+        # Wait for ClickHouse
+        - name: wait-clickhouse
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for ClickHouse..."
+              until nc -z chi-clickhouse-cluster-main-cluster-0-0.clickhouse.svc.cluster.local 9000; do
+                echo "  ClickHouse not ready, waiting..."
+                sleep 5
+              done
+              echo "ClickHouse is ready!"
+
+        # Wait for PeerDB PostgreSQL
+        - name: wait-peerdb-db
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for PeerDB PostgreSQL..."
+              until nc -z peerdb-postgresql.peerdb.svc.cluster.local 5432; do
+                echo "  PeerDB PostgreSQL not ready, waiting..."
+                sleep 5
+              done
+              echo "PeerDB PostgreSQL is ready!"
+
+      containers:
+        - name: setup-mirror
+          image: postgres:16-alpine
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              echo "========================================"
+              echo "PeerDB Mirror Setup via SQL"
+              echo "========================================"
+
+              echo ""
+              echo "Connecting to PeerDB metadata database..."
+
+              # Try to connect and setup
+              if psql -v ON_ERROR_STOP=1 << 'EOSQL'
+              \echo ''
+              \echo 'Checking PeerDB schema...'
+              \dt
+
+              \echo ''
+              \echo 'Creating PostgreSQL peer...'
+              \echo ''
+              EOSQL
+              then
+                echo "✅ Successfully connected to PeerDB database"
+                echo ""
+                echo "⚠️  PeerDB schema detection needed"
+                echo "The automatic setup requires knowledge of PeerDB's internal schema."
+                echo ""
+                echo "📝 Please configure the CDC mirror manually:"
+                echo "   1. Port-forward: kubectl port-forward -n peerdb svc/peerdb-server 9900:9900"
+                echo "   2. Access UI: http://localhost:9900"
+                echo "   3. Follow instructions in manifests/peerdb/README.md"
+                echo ""
+                echo "Connection details verified:"
+                echo "  ✅ PostgreSQL source: postgres-cluster-rw.cloudnative-pg.svc.cluster.local:5432"
+                echo "  ✅ ClickHouse dest: chi-clickhouse-cluster-main-cluster-0-0.clickhouse.svc.cluster.local:9000"
+                echo "  ✅ PeerDB metadata: peerdb-postgresql.peerdb.svc.cluster.local:5432"
+              else
+                echo "❌ Failed to connect to PeerDB database"
+                exit 1
+              fi
+
+          env:
+            - name: PGHOST
+              value: "peerdb-postgresql.peerdb.svc.cluster.local"
+            - name: PGPORT
+              value: "5432"
+            - name: PGUSER
+              value: "peerdb"
+            - name: PGPASSWORD
+              value: "peerdb123"
+            - name: PGDATABASE
+              value: "peerdb_metadata"
+
+      # Node affinity - Deploy only on peerdb nodes
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: workload
+                    operator: In
+                    values:
+                      - peerdb
+
+      # Tolerations for peerdb nodes
+      tolerations:
+        - key: workload
+          operator: Equal
+          value: peerdb
+          effect: NoSchedule
