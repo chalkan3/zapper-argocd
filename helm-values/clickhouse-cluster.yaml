@@ -109,6 +109,7 @@ spec:
 
           containers:
             - name: clickhouse
+              image: clickhouse/clickhouse-server:24.3
               resources:
                 requests:
                   memory: "1Gi"      # Reduced for resource constraints
