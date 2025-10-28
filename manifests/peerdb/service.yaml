@@ -43,3 +43,22 @@ spec:
   selector:
     app: peerdb
     component: flow-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: peerdb-ui
+  namespace: peerdb
+  labels:
+    app: peerdb
+    component: ui
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 3000
+      targetPort: http
+      protocol: TCP
+  selector:
+    app: peerdb
+    component: ui

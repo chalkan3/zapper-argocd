@@ -208,3 +208,76 @@ spec:
             limits:
               memory: 1Gi
               cpu: 500m
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: peerdb-ui
+  namespace: peerdb
+  labels:
+    app: peerdb
+    component: ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: peerdb
+      component: ui
+  template:
+    metadata:
+      labels:
+        app: peerdb
+        component: ui
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: workload
+                    operator: In
+                    values:
+                      - peerdb
+      tolerations:
+        - key: workload
+          operator: Equal
+          value: peerdb
+          effect: NoSchedule
+      containers:
+        - name: peerdb-ui
+          image: ghcr.io/peerdb-io/peerdb-ui:stable-v0.34.2
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          env:
+            - name: PEERDB_FLOW_SERVER_HTTP
+              value: "http://peerdb-flow-api:8113"
+            - name: DATABASE_URL
+              value: "postgres://peerdb:peerdb123@peerdb-postgresql:5432/peerdb_metadata"
+            - name: PEERDB_PASSWORD
+              value: "peerdb"
+            - name: NEXTAUTH_SECRET
+              value: "peerdb-secret-key-change-in-production"
+            - name: NEXTAUTH_URL
+              value: "http://localhost:3000"
+          resources:
+            requests:
+              memory: 256Mi
+              cpu: 250m
+            limits:
+              memory: 512Mi
+              cpu: 500m
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5

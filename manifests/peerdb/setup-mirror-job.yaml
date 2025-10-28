@@ -15,18 +15,18 @@ data:
     set -e
 
     echo "=========================================="
-    echo "PeerDB Mirror Auto-Setup via SQL"
+    echo "PeerDB Mirror Auto-Setup via REST API"
     echo "=========================================="
     echo ""
 
-    # PeerDB Flow API HTTP endpoint (port 8113)
-    PEERDB_API="http://peerdb-flow-api.peerdb.svc.cluster.local:8113"
+    # PeerDB UI REST API endpoint (port 3000)
+    PEERDB_API="http://peerdb-ui.peerdb.svc.cluster.local:3000"
 
-    # Wait for PeerDB Flow API
-    echo "Waiting for PeerDB Flow API (port 8113)..."
+    # Wait for PeerDB UI API
+    echo "Waiting for PeerDB UI API (port 3000)..."
     for i in $(seq 1 60); do
       if wget -q --spider --timeout=5 "$PEERDB_API" 2>/dev/null || wget -q --timeout=5 -O- "$PEERDB_API/api/v1/peers" 2>/dev/null; then
-        echo "✅ PeerDB Flow API is responding!"
+        echo "✅ PeerDB UI API is responding!"
         sleep 10
         break
       fi
