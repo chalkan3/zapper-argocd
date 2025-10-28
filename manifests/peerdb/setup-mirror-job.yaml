@@ -60,23 +60,28 @@ data:
             return None
 
     def wait_for_peerdb(base_url: str, max_retries: int = 60):
-        """Wait for PeerDB to be ready."""
-        print_info("Waiting for PeerDB to be ready...")
+        """Wait for PeerDB API to be ready."""
+        print_info("Waiting for PeerDB API to be ready...")
         for i in range(max_retries):
             try:
-                # Try to access the server
-                response = requests.get(f"{base_url}/", timeout=5)
-                # If we get any response (even 404), server is up
-                print_success("PeerDB is ready!")
-                return True
+                # Check if the API endpoint is responding
+                response = requests.get(f"{base_url}/api/v1/peers", timeout=5)
+                # If we get 200 or even 404, the API is up
+                if response.status_code in [200, 404, 405]:
+                    print_success("PeerDB API is ready!")
+                    # Give it a few more seconds to fully initialize
+                    time.sleep(10)
+                    return True
             except requests.exceptions.ConnectionError:
+                pass
+            except requests.exceptions.Timeout:
                 pass
             except Exception as e:
                 pass
             if (i + 1) % 6 == 0:  # Print every 30 seconds
                 print(f"  Attempt {i+1}/{max_retries}... waiting 5s")
             time.sleep(5)
-        print_error("PeerDB did not become ready")
+        print_error("PeerDB API did not become ready")
         return False
 
     def create_postgres_peer(base_url: str, pg_password: str) -> bool:
@@ -146,35 +151,54 @@ data:
     def create_mirror(base_url: str) -> bool:
         """Create CDC mirror."""
         print_info("Creating CDC mirror (PG → CH)...")
-        # Based on PeerDB API docs
-        mirror_config = {
-            "flow_job_name": "pg_to_ch_mirror",
-            "source_name": "postgres-source",
-            "destination_name": "clickhouse-destination",
-            "table_mappings": [
-                {
-                    "source_table_identifier": "public.users",
-                    "destination_table_identifier": "default.users"
-                },
-                {
-                    "source_table_identifier": "public.orders",
-                    "destination_table_identifier": "default.orders"
-                },
-                {
-                    "source_table_identifier": "public.events",
-                    "destination_table_identifier": "default.events"
-                }
-            ],
-            "do_initial_snapshot": True,
-            "max_batch_size": 1000000,
-            "idle_timeout_seconds": 60
+        # Corrected format based on PeerDB API documentation
+        # The API expects connection_configs wrapper
+        payload = {
+            "connection_configs": {
+                "flow_job_name": "pg_to_ch_mirror",
+                "source_name": "postgres-source",
+                "destination_name": "clickhouse-destination",
+                "table_mappings": [
+                    {
+                        "source_table_identifier": "public.users",
+                        "destination_table_identifier": "default.users"
+                    },
+                    {
+                        "source_table_identifier": "public.orders",
+                        "destination_table_identifier": "default.orders"
+                    },
+                    {
+                        "source_table_identifier": "public.events",
+                        "destination_table_identifier": "default.events"
+                    }
+                ],
+                "do_initial_snapshot": True,
+                "max_batch_size": 1000000,
+                "idle_timeout_seconds": 60
+            }
         }
+
+        # First verify peers exist
+        print_info("Verifying peers exist...")
+        try:
+            peers_response = requests.get(
+                f"{base_url}/api/v1/peers",
+                timeout=10
+            )
+            if peers_response.status_code == 200:
+                print_success(f"Found {len(peers_response.json())} peer(s)")
+            else:
+                print_info(f"Peer check returned: {peers_response.status_code}")
+        except Exception as e:
+            print_info(f"Could not verify peers: {e}")
+
+        # Create the mirror
         try:
             response = requests.post(
                 f"{base_url}/api/v1/flows/cdc/create",
-                json=mirror_config,
+                json=payload,
                 headers={"Content-Type": "application/json"},
-                timeout=60
+                timeout=120
             )
             if response.status_code in [200, 201, 409]:
                 print_success("Mirror created: pg_to_ch_mirror")
