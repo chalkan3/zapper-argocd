@@ -1,0 +1,36 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: temporal-add-search-attributes
+  namespace: peerdb
+spec:
+  ttlSecondsAfterFinished: 86400
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: temporal-setup
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: tctl
+        image: temporalio/admin-tools:latest
+        command:
+        - /bin/sh
+        - -c
+        - |
+          set -e
+
+          echo "Waiting for Temporal to be ready..."
+          sleep 30
+
+          echo "Adding MirrorName search attribute..."
+          echo "Y" | tctl --namespace default admin cluster add-search-attributes \
+            --name MirrorName \
+            --type Keyword || echo "Search attribute may already exist"
+
+          echo "Search attributes configured successfully!"
+          tctl --namespace default cluster health
+        env:
+        - name: TEMPORAL_CLI_ADDRESS
+          value: "peerdb-temporal-frontend:7233"
