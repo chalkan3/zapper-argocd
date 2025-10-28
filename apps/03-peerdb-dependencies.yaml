@@ -17,6 +17,9 @@ spec:
     helm:
       releaseName: peerdb
       values: |
+        image:
+          tag: "16"
+
         auth:
           username: peerdb
           password: peerdb123
