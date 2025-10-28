@@ -27,26 +27,92 @@ spec:
       value: postgres
       effect: NoSchedule
 
-  # PostgreSQL configuration for CDC
+  # PostgreSQL configuration for CDC and Performance
   postgresql:
     parameters:
+      # CDC Configuration
       wal_level: "logical"
       max_wal_senders: "10"
       max_replication_slots: "10"
+
+      # Connection Settings
       max_connections: "200"
+      superuser_reserved_connections: "3"
+
+      # Memory Settings
+      shared_buffers: "512MB"
+      effective_cache_size: "2GB"
+      maintenance_work_mem: "128MB"
+      work_mem: "16MB"
+
+      # WAL Settings
+      wal_buffers: "16MB"
+      min_wal_size: "1GB"
+      max_wal_size: "4GB"
+      wal_compression: "on"
+      wal_log_hints: "on"
+
+      # Checkpoint Settings
+      checkpoint_completion_target: "0.9"
+      checkpoint_timeout: "15min"
+
+      # Query Planning
+      random_page_cost: "1.1"
+      effective_io_concurrency: "200"
+      default_statistics_target: "100"
+
+      # Parallel Query
+      max_parallel_workers_per_gather: "4"
+      max_parallel_workers: "8"
+      max_worker_processes: "8"
+
+      # Logging
+      log_checkpoints: "on"
+      log_connections: "on"
+      log_disconnections: "on"
+      log_lock_waits: "on"
+      log_min_duration_statement: "1000"
+      log_line_prefix: "%t [%p]: [%l-1] user=%u,db=%d,app=%a,client=%h "
+
+      # Autovacuum
+      autovacuum_max_workers: "3"
+      autovacuum_naptime: "30s"
+
+      # Locale
+      lc_messages: "en_US.UTF-8"
+      lc_monetary: "en_US.UTF-8"
+      lc_numeric: "en_US.UTF-8"
+      lc_time: "en_US.UTF-8"
 
   # Storage configuration
   storage:
     size: 20Gi
+    storageClass: standard  # Adjust based on cloud provider
 
   # Resources for HPA
   resources:
     requests:
-      memory: "1Gi"
-      cpu: "500m"
+      memory: "2Gi"      # Increased for better performance
+      cpu: "1000m"       # Increased for parallel queries
     limits:
       memory: "4Gi"
       cpu: "2000m"
+
+  # Backup configuration
+  backup:
+    retentionPolicy: "30d"
+    barmanObjectStore:
+      destinationPath: s3://postgres-backups/  # Configure based on environment
+      s3Credentials:
+        accessKeyId:
+          name: backup-credentials
+          key: ACCESS_KEY_ID
+        secretAccessKey:
+          name: backup-credentials
+          key: SECRET_ACCESS_KEY
+      wal:
+        compression: gzip
+        maxParallel: 2
 
   # Bootstrap - Create schema only (data seeded by Job)
   bootstrap:
@@ -85,9 +151,33 @@ spec:
         - ALTER TABLE orders REPLICA IDENTITY FULL;
         - ALTER TABLE events REPLICA IDENTITY FULL;
 
+        # Create indexes for better performance
+        - CREATE INDEX idx_users_username ON users(username);
+        - CREATE INDEX idx_users_email ON users(email);
+        - CREATE INDEX idx_users_created_at ON users(created_at);
+        - CREATE INDEX idx_orders_user_id ON orders(user_id);
+        - CREATE INDEX idx_orders_status ON orders(status);
+        - CREATE INDEX idx_orders_created_at ON orders(created_at);
+        - CREATE INDEX idx_events_user_id ON events(user_id);
+        - CREATE INDEX idx_events_type ON events(event_type);
+        - CREATE INDEX idx_events_created_at ON events(created_at);
+        - CREATE INDEX idx_events_metadata ON events USING gin(metadata);
+
         # Note: Test data is seeded by the postgres-seed-data Job
         # See: manifests/cloudnative-pg/seed-data-job.yaml
 
   # Monitoring
   monitoring:
-    enablePodMonitor: false
+    enablePodMonitor: true  # Enable Prometheus monitoring
+    customQueriesConfigMap:
+      - name: postgres-custom-queries
+        key: custom-queries.yaml
+
+  # High Availability
+  enableSuperuserAccess: true
+  primaryUpdateStrategy: unsupervised
+
+  # Connection pooling
+  postgresql:
+    pg_hba:
+      - host all all 0.0.0.0/0 md5

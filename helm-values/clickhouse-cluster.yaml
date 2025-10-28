@@ -15,6 +15,62 @@ spec:
       admin/profile: default
       admin/quota: default
 
+      # Read-only user for monitoring
+      readonly/password: readonly123
+      readonly/networks/ip:
+        - "0.0.0.0/0"
+      readonly/profile: readonly
+      readonly/quota: default
+
+    # User profiles
+    profiles:
+      default/max_memory_usage: "10000000000"
+      default/max_memory_usage_for_user: "20000000000"
+      default/max_bytes_before_external_group_by: "20000000000"
+      default/max_bytes_before_external_sort: "20000000000"
+      default/max_execution_time: "300"
+      default/max_query_size: "262144"
+      default/max_ast_elements: "500000"
+      default/max_expanded_ast_elements: "500000"
+      default/readonly: "0"
+      default/allow_ddl: "1"
+
+      readonly/max_memory_usage: "5000000000"
+      readonly/max_execution_time: "60"
+      readonly/readonly: "1"
+      readonly/allow_ddl: "0"
+
+    # Global settings
+    settings:
+      # Performance
+      max_concurrent_queries: "100"
+      max_server_memory_usage: "0"  # Auto
+      max_server_memory_usage_to_ram_ratio: "0.9"
+
+      # Compression
+      min_compress_block_size: "65536"
+      max_compress_block_size: "1048576"
+
+      # Merges
+      max_bytes_to_merge_at_max_space_in_pool: "161061273600"
+      merge_tree_max_rows_to_use_cache: "1048576"
+      merge_tree_max_bytes_to_use_cache: "1073741824"
+
+      # Network
+      max_connections: "4096"
+      keep_alive_timeout: "3"
+
+      # Distributed
+      distributed_product_mode: "allow"
+      insert_distributed_sync: "1"
+
+      # Background operations
+      background_pool_size: "16"
+      background_schedule_pool_size: "16"
+      background_fetches_pool_size: "8"
+      background_move_pool_size: "8"
+      background_common_pool_size: "8"
+
     # ClickHouse Keeper configuration for replication
     zookeeper:
       nodes:
@@ -68,20 +124,41 @@ spec:
             - name: clickhouse
               resources:
                 requests:
-                  memory: "2Gi"
-                  cpu: "1000m"
+                  memory: "4Gi"      # Increased for better caching
+                  cpu: "2000m"       # Increased for parallel processing
                 limits:
                   memory: "8Gi"
                   cpu: "4000m"
+
+              # Liveness probe
+              livenessProbe:
+                httpGet:
+                  path: /ping
+                  port: 8123
+                initialDelaySeconds: 30
+                periodSeconds: 10
+                timeoutSeconds: 5
+                failureThreshold: 3
+
+              # Readiness probe
+              readinessProbe:
+                httpGet:
+                  path: /ping
+                  port: 8123
+                initialDelaySeconds: 10
+                periodSeconds: 5
+                timeoutSeconds: 3
+                failureThreshold: 3
 
     volumeClaimTemplates:
       - name: data-volume
         spec:
           accessModes:
             - ReadWriteOnce
+          storageClassName: fast-ssd  # Use SSD for better performance
           resources:
             requests:
-              storage: 10Gi
+              storage: 50Gi  # Increased for production workloads
 
       - name: log-volume
         spec:
@@ -89,7 +166,7 @@ spec:
             - ReadWriteOnce
           resources:
             requests:
-              storage: 5Gi
+              storage: 10Gi  # Increased for log retention
 
     serviceTemplates:
       - name: service-template

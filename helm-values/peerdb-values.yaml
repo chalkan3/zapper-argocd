@@ -4,49 +4,122 @@
 peerdb:
   image:
     repository: ghcr.io/peerdb-io/peerdb-server
-    tag: latest
-    pullPolicy: Always
+    tag: latest  # Pin to specific version in production
+    pullPolicy: IfNotPresent  # Changed from Always for stability
 
   service:
     type: ClusterIP
     port: 3000
+    annotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/port: "3000"
+      prometheus.io/path: "/metrics"
+
+  replicas: 2  # High availability
 
   env:
+    # Catalog (metadata) connection
     PEERDB_CATALOG_HOST: "peerdb-postgresql"
     PEERDB_CATALOG_PORT: "5432"
     PEERDB_CATALOG_USER: "peerdb"
     PEERDB_CATALOG_PASSWORD: "peerdb123"
     PEERDB_CATALOG_DATABASE: "peerdb_metadata"
+
+    # Temporal connection
     TEMPORAL_HOST_PORT: "peerdb-temporal-frontend:7233"
+
+    # Performance tuning
+    PEERDB_LOG_LEVEL: "info"
+    PEERDB_MAX_CONNECTIONS: "100"
+    PEERDB_CONNECTION_TIMEOUT: "30s"
+    PEERDB_IDLE_TIMEOUT: "10m"
+
+    # CDC settings
+    PEERDB_CDC_BATCH_SIZE: "10000"
+    PEERDB_CDC_FLUSH_INTERVAL: "5s"
+    PEERDB_CDC_MAX_PARALLEL_WORKERS: "4"
 
   resources:
     requests:
-      memory: 512Mi
-      cpu: 500m
+      memory: 1Gi      # Increased for better performance
+      cpu: 1000m       # Increased for parallel processing
     limits:
-      memory: 2Gi
+      memory: 4Gi      # Increased for large batches
       cpu: 2000m
+
+  # Health checks
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 3000
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+  readinessProbe:
+    httpGet:
+      path: /ready
+      port: 3000
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
 
 flowWorker:
   image:
     repository: ghcr.io/peerdb-io/peerdb-flow-worker
-    tag: latest
-    pullPolicy: Always
+    tag: latest  # Pin to specific version in production
+    pullPolicy: IfNotPresent
 
-  replicas: 2
+  replicas: 4  # Increased for parallel CDC processing
 
   env:
+    # Catalog connection
     PEERDB_CATALOG_HOST: "peerdb-postgresql"
     PEERDB_CATALOG_PORT: "5432"
     PEERDB_CATALOG_USER: "peerdb"
     PEERDB_CATALOG_PASSWORD: "peerdb123"
     PEERDB_CATALOG_DATABASE: "peerdb_metadata"
+
+    # Temporal connection
     TEMPORAL_HOST_PORT: "peerdb-temporal-frontend:7233"
+
+    # Worker configuration
+    PEERDB_WORKER_CONCURRENCY: "10"
+    PEERDB_WORKER_TASK_QUEUE: "peerdb-workers"
+
+    # Performance tuning
+    PEERDB_LOG_LEVEL: "info"
+    PEERDB_BATCH_SIZE: "10000"
+    PEERDB_FLUSH_TIMEOUT: "5s"
+    PEERDB_MAX_BATCH_WAIT: "1s"
+
+    # Memory and CPU settings
+    GOMAXPROCS: "4"
+    GOMEMLIMIT: "1800MiB"  # Leave headroom for GC
 
   resources:
     requests:
-      memory: 512Mi
-      cpu: 500m
+      memory: 1Gi      # Increased for batch processing
+      cpu: 1000m       # Increased for parallel operations
     limits:
       memory: 2Gi
       cpu: 2000m
+
+  # Health checks
+  livenessProbe:
+    exec:
+      command:
+        - /bin/sh
+        - -c
+        - pgrep -f flow-worker
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+  # Pod disruption budget
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 2  # Keep at least 2 workers running during updates
