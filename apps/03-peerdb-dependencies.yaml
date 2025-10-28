@@ -51,11 +51,11 @@ spec:
 
           resources:
             requests:
-              memory: 512Mi
-              cpu: 500m
+              memory: 256Mi
+              cpu: 250m
             limits:
-              memory: 2Gi
-              cpu: 2000m
+              memory: 1Gi
+              cpu: 500m
 
           initdb:
             scripts:

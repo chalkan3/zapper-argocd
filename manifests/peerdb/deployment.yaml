@@ -62,11 +62,11 @@ spec:
               value: "peerdb-temporal-frontend:7233"
           resources:
             requests:
-              memory: 512Mi
-              cpu: 500m
+              memory: 256Mi
+              cpu: 250m
             limits:
-              memory: 2Gi
-              cpu: 2000m
+              memory: 1Gi
+              cpu: 500m
           livenessProbe:
             httpGet:
               path: /health
@@ -137,8 +137,8 @@ spec:
               value: "peerdb-temporal-frontend:7233"
           resources:
             requests:
-              memory: 512Mi
-              cpu: 500m
+              memory: 256Mi
+              cpu: 250m
             limits:
-              memory: 2Gi
-              cpu: 2000m
+              memory: 1Gi
+              cpu: 500m
