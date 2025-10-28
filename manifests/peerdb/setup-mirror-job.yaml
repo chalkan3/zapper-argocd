@@ -75,32 +75,28 @@ data:
     # Note: REPLICATION permission must be granted manually or via postInitApplicationSQL
     # kubectl exec -n cloudnative-pg postgres-cluster-1 -- psql -U postgres -c "ALTER USER app_user WITH REPLICATION;"
 
-    # Create ClickHouse Peer via REST API (with local S3 path)
+    # Create ClickHouse Peer via REST API
+    # Note: Using AWS_SDK_LOAD_CONFIG=false to prevent AWS credential lookup
     echo ""
     echo "Creating ClickHouse peer via API..."
-    curl -v -X POST "$PEERDB_API/api/v1/peers/create" \
+    AWS_SDK_LOAD_CONFIG=false curl -v -X POST "$PEERDB_API/api/v1/peers/create" \
       -H "$AUTH_HEADER" \
       -H "Content-Type: application/json" \
-      -d '{
-        "peer": {
-          "name": "clickhouse_destination",
-          "type": 8,
-          "clickhouse_config": {
-            "host": "chi-clickhouse-cluster-main-cluster-0-0.clickhouse.svc.cluster.local",
-            "port": 9000,
-            "user": "admin",
-            "password": "admin123",
-            "database": "default",
-            "disable_tls": true,
-            "s3_path": "local://tmp/peerdb",
-            "access_key_id": "",
-            "secret_access_key": "",
-            "region": "",
-            "endpoint": ""
+      -d "{
+        \"peer\": {
+          \"name\": \"clickhouse_destination\",
+          \"type\": 8,
+          \"clickhouse_config\": {
+            \"host\": \"chi-clickhouse-cluster-main-cluster-0-0.clickhouse.svc.cluster.local\",
+            \"port\": 9000,
+            \"user\": \"admin\",
+            \"password\": \"admin123\",
+            \"database\": \"default\",
+            \"disable_tls\": true
           }
         },
-        "allow_update": false
-      }'
+        \"allow_update\": false
+      }"
     echo ""
     echo "✅ ClickHouse peer request sent"
 

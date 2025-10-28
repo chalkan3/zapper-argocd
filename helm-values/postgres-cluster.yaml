@@ -172,6 +172,14 @@ spec:
         # Grant REPLICATION permission for CDC (PeerDB)
         - ALTER USER app_user WITH REPLICATION;
 
+        # Change table ownership to app_user (required for CDC publications)
+        - ALTER TABLE users OWNER TO app_user;
+        - ALTER TABLE orders OWNER TO app_user;
+        - ALTER TABLE events OWNER TO app_user;
+        - ALTER SEQUENCE users_id_seq OWNER TO app_user;
+        - ALTER SEQUENCE orders_id_seq OWNER TO app_user;
+        - ALTER SEQUENCE events_id_seq OWNER TO app_user;
+
         # Note: Test data is seeded by the postgres-seed-data Job
         # See: manifests/cloudnative-pg/seed-data-job.yaml
 
