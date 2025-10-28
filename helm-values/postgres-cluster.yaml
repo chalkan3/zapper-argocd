@@ -89,7 +89,7 @@ spec:
   # Storage configuration
   storage:
     size: 20Gi
-    storageClass: standard  # Adjust based on cloud provider
+    storageClass: local-path  # K3s default storage class
 
   # Resources for HPA
   resources:
