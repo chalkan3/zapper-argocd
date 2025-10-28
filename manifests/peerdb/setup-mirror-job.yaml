@@ -75,10 +75,10 @@ data:
     # Note: REPLICATION permission must be granted manually or via postInitApplicationSQL
     # kubectl exec -n cloudnative-pg postgres-cluster-1 -- psql -U postgres -c "ALTER USER app_user WITH REPLICATION;"
 
-    # Create ClickHouse Peer via REST API
+    # Create ClickHouse Peer via REST API with MinIO S3
     # Note: S3 path required for staging CDC data
     echo ""
-    echo "Creating ClickHouse peer via API..."
+    echo "Creating ClickHouse peer via API with MinIO S3..."
     curl -v -X POST "$PEERDB_API/api/v1/peers/create" \
       -H "$AUTH_HEADER" \
       -H "Content-Type: application/json" \
@@ -93,7 +93,11 @@ data:
             "password": "admin123",
             "database": "default",
             "disable_tls": true,
-            "s3_path": "peerdb-staging"
+            "s3_path": "peerdb-staging",
+            "access_key_id": "minioadmin",
+            "secret_access_key": "minioadmin",
+            "region": "us-east-1",
+            "endpoint": "http://minio.minio.svc.cluster.local:9000"
           }
         },
         "allow_update": false
