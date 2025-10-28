@@ -112,7 +112,7 @@ data:
             "name": "clickhouse-destination",
             "type": "CLICKHOUSE",
             "config": {
-                "host": "chi-clickhouse-cluster-clickhouse-0-0.clickhouse.svc.cluster.local",
+                "host": "chi-clickhouse-cluster-main-cluster-0-0.clickhouse.svc.cluster.local",
                 "port": 9000,
                 "user": "admin",
                 "password": "admin123",
@@ -176,7 +176,7 @@ data:
 
     def main():
         print_header("PeerDB Mirror Auto-Setup")
-        peerdb_url = "http://peerdb.peerdb.svc.cluster.local:3000"
+        peerdb_url = "http://peerdb-server.peerdb.svc.cluster.local:9900"
 
         if not wait_for_peerdb(peerdb_url):
             sys.exit(1)
