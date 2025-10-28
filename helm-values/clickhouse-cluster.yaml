@@ -71,25 +71,12 @@ spec:
       background_move_pool_size: "8"
       background_common_pool_size: "8"
 
-    # ClickHouse Keeper configuration for replication
-    zookeeper:
-      nodes:
-        - host: clickhouse-keeper-0.clickhouse-keeper-headless.clickhouse.svc.cluster.local
-          port: 9181
-        - host: clickhouse-keeper-1.clickhouse-keeper-headless.clickhouse.svc.cluster.local
-          port: 9181
-        - host: clickhouse-keeper-2.clickhouse-keeper-headless.clickhouse.svc.cluster.local
-          port: 9181
-
+    # Cluster with 2 shards, no replication (no keeper needed)
     clusters:
-      - name: "clickhouse-cluster"
+      - name: "main-cluster"
         layout:
           shardsCount: 2
-          replicasCount: 2
-
-        schemaPolicy:
-          replica: "all"
-          shard: "all"
+          replicasCount: 1
 
   defaults:
     templates:
@@ -180,86 +167,5 @@ spec:
               targetPort: 9000
           type: ClusterIP
 ---
-apiVersion: "clickhouse.altinity.com/v1"
-kind: "ClickHouseKeeperInstallation"
-metadata:
-  name: clickhouse-keeper
-  namespace: clickhouse
-spec:
-  configuration:
-    settings:
-      logger/level: "information"
-      logger/console: "true"
-
-  clusters:
-    - name: keeper-cluster
-      layout:
-        replicasCount: 3
-
-  templates:
-    podTemplates:
-      - name: keeper-pod-template
-        spec:
-          # Node affinity - Deploy only on clickhouse nodes
-          affinity:
-            nodeAffinity:
-              requiredDuringSchedulingIgnoredDuringExecution:
-                nodeSelectorTerms:
-                  - matchExpressions:
-                      - key: workload
-                        operator: In
-                        values:
-                          - clickhouse
-
-          # Tolerations for clickhouse nodes
-          tolerations:
-            - key: workload
-              operator: Equal
-              value: clickhouse
-              effect: NoSchedule
-
-          containers:
-            - name: clickhouse-keeper
-              image: clickhouse/clickhouse-keeper:23.8
-              ports:
-                - containerPort: 9181
-                  name: client
-                - containerPort: 9234
-                  name: raft
-              volumeMounts:
-                - name: keeper-data
-                  mountPath: /var/lib/clickhouse-keeper
-              resources:
-                requests:
-                  memory: "512Mi"
-                  cpu: "500m"
-                limits:
-                  memory: "2Gi"
-                  cpu: "1000m"
-
-    volumeClaimTemplates:
-      - name: keeper-data
-        spec:
-          accessModes:
-            - ReadWriteOnce
-          storageClassName: local-path  # K3s default storage class
-          resources:
-            requests:
-              storage: 5Gi
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: clickhouse-keeper-headless
-  namespace: clickhouse
-spec:
-  ports:
-    - name: client
-      port: 9181
-      targetPort: 9181
-    - name: raft
-      port: 9234
-      targetPort: 9234
-  clusterIP: None
-  selector:
-    clickhouse.altinity.com/keeper: clickhouse-keeper
+# Removed ClickHouseKeeperInstallation and service - using simple single-node cluster
+# Can be upgraded to replicated cluster with keeper later if needed
