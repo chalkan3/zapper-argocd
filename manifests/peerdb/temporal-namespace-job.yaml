@@ -39,7 +39,7 @@ spec:
 
       containers:
         - name: create-namespace
-          image: temporalio/admin-tools:1.25.0
+          image: temporalio/admin-tools:1.25.0-tctl-1.18.1-cli-1.0.0
           command:
             - /bin/sh
             - -c
