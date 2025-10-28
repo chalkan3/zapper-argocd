@@ -27,8 +27,8 @@ data:
     for i in $(seq 1 60); do
       if wget -q --spider --timeout=5 "$PEERDB_API" 2>/dev/null || wget -q --timeout=5 -O- "$PEERDB_API/api/v1/peers" 2>/dev/null; then
         echo "✅ PeerDB UI API is responding!"
-        echo "Waiting 30s for API to fully initialize..."
-        sleep 30
+        echo "Waiting 60s for API to fully initialize..."
+        sleep 60
         break
       fi
       if [ $((i % 6)) -eq 0 ]; then
@@ -204,7 +204,7 @@ spec:
               done
 
               echo "Waiting extra time for PeerDB services to fully initialize..."
-              sleep 60
+              sleep 120
 
               echo "Running setup script..."
               sh /scripts/setup-mirror.sh
