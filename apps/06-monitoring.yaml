@@ -270,6 +270,7 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+      - ServerSideApply=true  # Required for large CRDs
 
 ---
 # ServiceMonitors Application
