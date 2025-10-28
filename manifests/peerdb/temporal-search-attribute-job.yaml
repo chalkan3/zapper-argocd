@@ -5,13 +5,27 @@ metadata:
   namespace: peerdb
 spec:
   ttlSecondsAfterFinished: 86400
-  backoffLimit: 3
+  backoffLimit: 10
   template:
     metadata:
       labels:
         app: temporal-setup
     spec:
       restartPolicy: OnFailure
+      initContainers:
+      - name: wait-for-temporal
+        image: busybox:latest
+        command:
+        - /bin/sh
+        - -c
+        - |
+          echo "Waiting for Temporal frontend to be ready..."
+          until nc -z peerdb-temporal-frontend 7233; do
+            echo "Temporal not ready yet, waiting..."
+            sleep 5
+          done
+          echo "Temporal is ready!"
+          sleep 10
       containers:
       - name: tctl
         image: temporalio/admin-tools:latest
@@ -21,8 +35,19 @@ spec:
         - |
           set -e
 
-          echo "Waiting for Temporal to be ready..."
-          sleep 30
+          echo "Checking Temporal health..."
+          max_retries=10
+          retry=0
+          until tctl --namespace default cluster health || [ $retry -eq $max_retries ]; do
+            retry=$((retry + 1))
+            echo "Temporal not healthy yet, retry $retry/$max_retries..."
+            sleep 10
+          done
+
+          if [ $retry -eq $max_retries ]; then
+            echo "ERROR: Temporal not healthy after $max_retries retries"
+            exit 1
+          fi
 
           echo "Adding MirrorName search attribute..."
           echo "Y" | tctl --namespace default admin cluster add-search-attributes \
