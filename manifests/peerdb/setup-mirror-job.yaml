@@ -87,21 +87,25 @@ data:
     def create_postgres_peer(base_url: str, pg_password: str) -> bool:
         """Create PostgreSQL peer."""
         print_info("Creating PostgreSQL peer...")
-        peer_config = {
-            "name": "postgres-source",
-            "type": 1,  # POSTGRES type ID
-            "config": {
-                "host": "postgres-cluster-rw.cloudnative-pg.svc.cluster.local",
-                "port": 5432,
-                "user": "app_user",
-                "password": pg_password,
-                "database": "app_db"
-            }
+        # Correct format based on PeerDB API docs
+        payload = {
+            "peer": {
+                "name": "postgres-source",
+                "type": 3,  # POSTGRES type (not 1)
+                "postgres_config": {
+                    "host": "postgres-cluster-rw.cloudnative-pg.svc.cluster.local",
+                    "port": 5432,
+                    "user": "app_user",
+                    "password": pg_password,
+                    "database": "app_db"
+                }
+            },
+            "allow_update": False
         }
         try:
             response = requests.post(
                 f"{base_url}/api/v1/peers/create",
-                json=peer_config,
+                json=payload,
                 headers={"Content-Type": "application/json"},
                 timeout=30
             )
@@ -109,31 +113,35 @@ data:
                 print_success("PostgreSQL peer created")
                 return True
             print_error(f"Failed: {response.status_code} - {response.text}")
-            # Try to continue anyway
-            return True
+            # Try to continue anyway if already exists
+            return response.status_code == 409
         except Exception as e:
             print_error(f"Exception: {e}")
-            # Try to continue anyway
-            return True
+            return False
 
     def create_clickhouse_peer(base_url: str) -> bool:
         """Create ClickHouse peer."""
         print_info("Creating ClickHouse peer...")
-        peer_config = {
-            "name": "clickhouse-destination",
-            "type": 2,  # CLICKHOUSE type ID
-            "config": {
-                "host": "chi-clickhouse-cluster-main-cluster-0-0.clickhouse.svc.cluster.local",
-                "port": 9000,
-                "user": "admin",
-                "password": "admin123",
-                "database": "default"
-            }
+        # Correct format based on PeerDB API docs
+        payload = {
+            "peer": {
+                "name": "clickhouse-destination",
+                "type": 8,  # CLICKHOUSE type (not 2)
+                "clickhouse_config": {
+                    "host": "chi-clickhouse-cluster-main-cluster-0-0.clickhouse.svc.cluster.local",
+                    "port": 9000,
+                    "user": "admin",
+                    "password": "admin123",
+                    "database": "default",
+                    "disable_tls": True
+                }
+            },
+            "allow_update": False
         }
         try:
             response = requests.post(
                 f"{base_url}/api/v1/peers/create",
-                json=peer_config,
+                json=payload,
                 headers={"Content-Type": "application/json"},
                 timeout=30
             )
@@ -141,12 +149,11 @@ data:
                 print_success("ClickHouse peer created")
                 return True
             print_error(f"Failed: {response.status_code} - {response.text}")
-            # Try to continue anyway
-            return True
+            # Try to continue anyway if already exists
+            return response.status_code == 409
         except Exception as e:
             print_error(f"Exception: {e}")
-            # Try to continue anyway
-            return True
+            return False
 
     def create_mirror(base_url: str) -> bool:
         """Create CDC mirror."""

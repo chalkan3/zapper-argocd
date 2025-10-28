@@ -60,6 +60,8 @@ spec:
               value: "peerdb_metadata"
             - name: TEMPORAL_HOST_PORT
               value: "peerdb-temporal-frontend:7233"
+            - name: PEERDB_ENABLE_MIRROR_ROUTES
+              value: "true"
           resources:
             requests:
               memory: 256Mi
