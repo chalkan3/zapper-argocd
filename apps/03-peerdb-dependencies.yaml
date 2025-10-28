@@ -18,7 +18,7 @@ spec:
       releaseName: peerdb
       values: |
         image:
-          tag: "17.2.0-debian-12-r7"
+          tag: "latest"
 
         auth:
           username: peerdb
