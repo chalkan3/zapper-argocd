@@ -4,8 +4,8 @@
 peerdb:
   image:
     repository: ghcr.io/peerdb-io/peerdb-server
-    tag: latest  # Pin to specific version in production
-    pullPolicy: IfNotPresent  # Changed from Always for stability
+    tag: stable-v0.34.2
+    pullPolicy: IfNotPresent
 
   service:
     type: ClusterIP
@@ -68,8 +68,8 @@ peerdb:
 
 flowWorker:
   image:
-    repository: ghcr.io/peerdb-io/peerdb-flow-worker
-    tag: latest  # Pin to specific version in production
+    repository: ghcr.io/peerdb-io/flow-worker
+    tag: stable-v0.34.2
     pullPolicy: IfNotPresent
 
   replicas: 4  # Increased for parallel CDC processing
