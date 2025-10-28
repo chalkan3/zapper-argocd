@@ -83,6 +83,72 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  name: peerdb-flow-api
+  namespace: peerdb
+  labels:
+    app: peerdb
+    component: flow-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: peerdb
+      component: flow-api
+  template:
+    metadata:
+      labels:
+        app: peerdb
+        component: flow-api
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: workload
+                    operator: In
+                    values:
+                      - peerdb
+      tolerations:
+        - key: workload
+          operator: Equal
+          value: peerdb
+          effect: NoSchedule
+      containers:
+        - name: flow-api
+          image: ghcr.io/peerdb-io/flow-api:stable-v0.34.2
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: grpc
+              containerPort: 8112
+              protocol: TCP
+            - name: http
+              containerPort: 8113
+              protocol: TCP
+          env:
+            - name: PEERDB_CATALOG_HOST
+              value: "peerdb-postgresql"
+            - name: PEERDB_CATALOG_PORT
+              value: "5432"
+            - name: PEERDB_CATALOG_USER
+              value: "peerdb"
+            - name: PEERDB_CATALOG_PASSWORD
+              value: "peerdb123"
+            - name: PEERDB_CATALOG_DATABASE
+              value: "peerdb_metadata"
+            - name: TEMPORAL_HOST_PORT
+              value: "peerdb-temporal-frontend:7233"
+          resources:
+            requests:
+              memory: 256Mi
+              cpu: 250m
+            limits:
+              memory: 1Gi
+              cpu: 500m
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
   name: peerdb-flow-worker
   namespace: peerdb
   labels:

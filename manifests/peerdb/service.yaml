@@ -20,3 +20,26 @@ spec:
   selector:
     app: peerdb
     component: server
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: peerdb-flow-api
+  namespace: peerdb
+  labels:
+    app: peerdb
+    component: flow-api
+spec:
+  type: ClusterIP
+  ports:
+    - name: grpc
+      port: 8112
+      targetPort: grpc
+      protocol: TCP
+    - name: http
+      port: 8113
+      targetPort: http
+      protocol: TCP
+  selector:
+    app: peerdb
+    component: flow-api
