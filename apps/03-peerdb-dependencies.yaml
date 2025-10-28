@@ -153,11 +153,11 @@ spec:
 
           resources:
             requests:
-              memory: 512Mi
-              cpu: 500m
+              memory: 256Mi
+              cpu: 200m
             limits:
-              memory: 1Gi
-              cpu: 1000m
+              memory: 512Mi
+              cpu: 400m
 
         admintools:
           enabled: true
