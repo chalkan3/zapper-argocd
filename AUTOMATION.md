@@ -8,8 +8,11 @@ Deploy 100% automático via ArgoCD GitOps, sem nenhuma intervenção manual nece
 
 ## 📋 Ordem de Deploy (Sync Waves)
 
+### Wave 0: CRDs
+- CloudNativePG Pooler CRD (required before operator)
+
 ### Wave 1: Operators
-- CloudNativePG Operator
+- CloudNativePG Operator (with standard CRDs)
 - ClickHouse Operator (Altinity)
 
 ### Wave 2: Infrastructure
