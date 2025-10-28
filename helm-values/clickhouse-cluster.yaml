@@ -57,34 +57,16 @@ spec:
     podTemplates:
       - name: clickhouse-pod-template
         spec:
-          # Node affinity - Deploy only on clickhouse nodes
-          affinity:
-            nodeAffinity:
-              requiredDuringSchedulingIgnoredDuringExecution:
-                nodeSelectorTerms:
-                  - matchExpressions:
-                      - key: workload
-                        operator: In
-                        values:
-                          - clickhouse
-
-          # Tolerations for clickhouse nodes
-          tolerations:
-            - key: workload
-              operator: Equal
-              value: clickhouse
-              effect: NoSchedule
-
           containers:
             - name: clickhouse
               image: clickhouse/clickhouse-server:24.3
               resources:
                 requests:
-                  memory: "1Gi"      # Reduced for resource constraints
-                  cpu: "500m"        # Reduced for resource constraints
+                  memory: "256Mi"    # MINIMAL
+                  cpu: "100m"        # MINIMAL
                 limits:
-                  memory: "4Gi"
-                  cpu: "2000m"
+                  memory: "512Mi"    # MINIMAL
+                  cpu: "500m"        # MINIMAL
 
               # Liveness probe
               livenessProbe:
@@ -114,7 +96,7 @@ spec:
           storageClassName: local-path  # K3s default storage class
           resources:
             requests:
-              storage: 50Gi  # Increased for production workloads
+              storage: 5Gi   # MINIMAL
 
       - name: log-volume
         spec:
@@ -122,7 +104,7 @@ spec:
             - ReadWriteOnce
           resources:
             requests:
-              storage: 10Gi  # Increased for log retention
+              storage: 1Gi   # MINIMAL
 
     serviceTemplates:
       - name: service-template

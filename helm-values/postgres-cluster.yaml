@@ -7,25 +7,7 @@ metadata:
   name: postgres-cluster
   namespace: cloudnative-pg
 spec:
-  instances: 3
-
-  # Node affinity - Deploy only on postgres nodes
-  affinity:
-    nodeAffinity:
-      requiredDuringSchedulingIgnoredDuringExecution:
-        nodeSelectorTerms:
-          - matchExpressions:
-              - key: workload
-                operator: In
-                values:
-                  - postgres
-
-  # Tolerations for postgres nodes
-  tolerations:
-    - key: workload
-      operator: Equal
-      value: postgres
-      effect: NoSchedule
+  instances: 1
 
   # PostgreSQL configuration for CDC and Performance
   postgresql:
@@ -41,16 +23,16 @@ spec:
       max_connections: "200"
       superuser_reserved_connections: "3"
 
-      # Memory Settings
-      shared_buffers: "512MB"
-      effective_cache_size: "2GB"
-      maintenance_work_mem: "128MB"
-      work_mem: "16MB"
+      # Memory Settings - MINIMAL
+      shared_buffers: "128MB"
+      effective_cache_size: "512MB"
+      maintenance_work_mem: "64MB"
+      work_mem: "4MB"
 
-      # WAL Settings
-      wal_buffers: "16MB"
-      min_wal_size: "1GB"
-      max_wal_size: "4GB"
+      # WAL Settings - MINIMAL
+      wal_buffers: "4MB"
+      min_wal_size: "80MB"
+      max_wal_size: "1GB"
       wal_compression: "on"
       wal_log_hints: "on"
 
@@ -88,17 +70,17 @@ spec:
 
   # Storage configuration
   storage:
-    size: 20Gi
+    size: 5Gi
     storageClass: local-path  # K3s default storage class
 
-  # Resources for HPA
+  # Resources - MINIMAL
   resources:
     requests:
-      memory: "2Gi"      # Increased for better performance
-      cpu: "1000m"       # Increased for parallel queries
+      memory: "256Mi"
+      cpu: "100m"
     limits:
-      memory: "4Gi"
-      cpu: "2000m"
+      memory: "512Mi"
+      cpu: "500m"
 
   # Backup configuration
   backup:
