@@ -41,10 +41,10 @@ data:
     echo "Getting PostgreSQL password from secret..."
     PG_PASSWORD=$(kubectl get secret -n cloudnative-pg postgres-cluster-app -o jsonpath='{.data.password}' | base64 -d)
 
-    # Install curl for API calls
+    # Install curl and postgresql-client for API calls
     echo ""
-    echo "Installing curl..."
-    apk add --no-cache curl
+    echo "Installing curl and postgresql-client..."
+    apk add --no-cache curl postgresql-client
 
     # Create basic auth header (empty user:password = just colon base64 encoded)
     AUTH_HEADER="Authorization: Basic $(echo -n ':peerdb' | base64)"
@@ -72,7 +72,16 @@ data:
     echo ""
     echo "✅ PostgreSQL peer request sent"
 
-    # Create ClickHouse Peer via REST API
+    # Grant REPLICATION permission to app_user
+    echo ""
+    echo "Granting REPLICATION permission to app_user..."
+    PGPASSWORD="$PG_PASSWORD" psql -h postgres-cluster-rw.cloudnative-pg.svc.cluster.local -U app_user -d app_db -c "ALTER USER app_user WITH REPLICATION;" || echo "Warning: Could not grant REPLICATION (may already be set or need superuser)"
+
+    # Try with postgres user instead
+    echo "Trying with postgres superuser..."
+    kubectl exec -n cloudnative-pg postgres-cluster-1 -- psql -U postgres -c "ALTER USER app_user WITH REPLICATION;"
+
+    # Create ClickHouse Peer via REST API (without S3 bucket)
     echo ""
     echo "Creating ClickHouse peer via API..."
     curl -v -X POST "$PEERDB_API/api/v1/peers/create" \
@@ -88,7 +97,12 @@ data:
             "user": "admin",
             "password": "admin123",
             "database": "default",
-            "disable_tls": true
+            "disable_tls": true,
+            "s3_path": "local://tmp/peerdb",
+            "access_key_id": "",
+            "secret_access_key": "",
+            "region": "",
+            "endpoint": ""
           }
         },
         "allow_update": false

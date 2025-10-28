@@ -169,6 +169,9 @@ spec:
         - GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO app_user;
         - GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_user;
 
+        # Grant REPLICATION permission for CDC (PeerDB)
+        - ALTER USER app_user WITH REPLICATION;
+
         # Note: Test data is seeded by the postgres-seed-data Job
         # See: manifests/cloudnative-pg/seed-data-job.yaml
 
