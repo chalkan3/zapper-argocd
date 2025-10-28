@@ -124,11 +124,11 @@ spec:
             - name: clickhouse
               resources:
                 requests:
-                  memory: "4Gi"      # Increased for better caching
-                  cpu: "2000m"       # Increased for parallel processing
+                  memory: "1Gi"      # Reduced for resource constraints
+                  cpu: "500m"        # Reduced for resource constraints
                 limits:
-                  memory: "8Gi"
-                  cpu: "4000m"
+                  memory: "4Gi"
+                  cpu: "2000m"
 
               # Liveness probe
               livenessProbe:
@@ -155,7 +155,7 @@ spec:
         spec:
           accessModes:
             - ReadWriteOnce
-          storageClassName: fast-ssd  # Use SSD for better performance
+          storageClassName: local-path  # K3s default storage class
           resources:
             requests:
               storage: 50Gi  # Increased for production workloads
@@ -242,6 +242,7 @@ spec:
         spec:
           accessModes:
             - ReadWriteOnce
+          storageClassName: local-path  # K3s default storage class
           resources:
             requests:
               storage: 5Gi
