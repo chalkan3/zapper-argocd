@@ -89,6 +89,9 @@ status: ## Show status of all applications and pods
 test: ## Run end-to-end tests
 	@./scripts/test-e2e.sh
 
+fix-sync: ## Fix ArgoCD sync status (Unknown → Synced)
+	@./scripts/fix-argocd-sync.sh
+
 watch: ## Watch all pods in real-time
 	@watch -n 2 'kubectl get pods --all-namespaces | grep -E "NAMESPACE|clickhouse|cloudnative-pg|peerdb|monitoring"'
 
