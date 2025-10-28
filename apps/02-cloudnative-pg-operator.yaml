@@ -69,7 +69,7 @@ spec:
     targetRevision: HEAD
     path: helm-values
     directory:
-      include: postgres-cluster.yaml
+      include: postgres-*.yaml
 
   destination:
     server: https://kubernetes.default.svc
