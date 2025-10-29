@@ -13,7 +13,6 @@ data:
   setup-mirror.sh: |
     #!/bin/sh
     set -e
-
     echo "=========================================="
     echo "PeerDB Mirror Auto-Setup via REST API"
     echo "=========================================="
