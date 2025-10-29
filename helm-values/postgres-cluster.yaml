@@ -82,6 +82,24 @@ spec:
       memory: "512Mi"
       cpu: "500m"
 
+  # Node affinity - Deploy only on postgres nodes
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: workload
+                operator: In
+                values:
+                  - postgres
+
+  # Tolerations for postgres nodes
+  tolerations:
+    - key: workload
+      operator: Equal
+      value: postgres
+      effect: NoSchedule
+
   # Backup configuration
   backup:
     retentionPolicy: "30d"
