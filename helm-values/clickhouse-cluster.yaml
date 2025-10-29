@@ -57,6 +57,24 @@ spec:
     podTemplates:
       - name: clickhouse-pod-template
         spec:
+          # Node affinity - Deploy only on clickhouse nodes
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
+                      - key: workload
+                        operator: In
+                        values:
+                          - clickhouse
+
+          # Tolerations for clickhouse nodes
+          tolerations:
+            - key: workload
+              operator: Equal
+              value: clickhouse
+              effect: NoSchedule
+
           containers:
             - name: clickhouse
               image: clickhouse/clickhouse-server:24.3
